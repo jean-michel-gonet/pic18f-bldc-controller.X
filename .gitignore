@@ -1,5 +1,8 @@
-# Object file
-*.o
+# MPLAB files
+Makefile
+nbproject/
+build/
+dist/
 
-# Ada Library Information
-*.ali
+# C Intermediary files
+*.obj
