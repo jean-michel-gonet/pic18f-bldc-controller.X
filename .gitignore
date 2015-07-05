@@ -3,6 +3,7 @@ Makefile
 nbproject/
 build/
 dist/
+funclist
 
 # C Intermediary files
 *.obj
