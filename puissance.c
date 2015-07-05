@@ -2,7 +2,7 @@
 #include "test.h"
 
 /**
- * Correspondance entre vitesse et durée de phase.
+ * Correspondance entre vitesse et durï¿½e de phase.
  */
 const int const dureeDePhaseParVitesse[VITESSE_MAX + 1] = {
     1250, 496, 307, 221, 172, 140, 117, 101, 88, 77, 69, 61, 55,
@@ -15,16 +15,16 @@ const int const dureeDePhaseParVitesse[VITESSE_MAX + 1] = {
 static unsigned char puissance = 0;
 
 /**
- * Erreur entre la vitesse demandée et la vitesse actuelle.
- * La valeur -127 indique que l'erreur n'a pas encore été calculée.
+ * Erreur entre la vitesse demandï¿½e et la vitesse actuelle.
+ * La valeur -127 indique que l'erreur n'a pas encore ï¿½tï¿½ calculï¿½e.
  */
 static signed char e0 = -127;
 
 /**
- * Etablit la puissance de départ.
- * Est utilisée pour initialiser la puissance à une valeur possible,
- * en particulier suite à un démarrage ou à une situation de blocage.
- * @param p La puissance de départ.
+ * Etablit la puissance de dÃ©part.
+ * Est utilisÃ©e pour initialiser la puissance Ã  une valeur possible,
+ * en particulier suite Ã  un dÃ©marrage ou Ã  une situation de blocage.
+ * @param p La puissance de dÃ©part.
  */
 void etablitPuissance(unsigned char p) {
     puissance = p;
@@ -32,17 +32,17 @@ void etablitPuissance(unsigned char p) {
 }
 
 /**
- * Calcule la puissance selon la vitesse demandée et la durée de la dernière phase.
- * @param dureeDePhase Durée de phase actuelle.
- * @param vitesse Vitesse demandée.
- * @return Puissance à appliquer.
+ * Calcule la puissance selon la vitesse demandÃ©e et la durÃ©e de la derniÃ¨re phase.
+ * @param dureeDePhase DurÃ©e de phase actuelle.
+ * @param vitesse Vitesse demandÃ©e.
+ * @return Puissance Ã  appliquer.
  */
 unsigned char calculePuissance(int dureeDePhaseActuelle, unsigned char vitesseDemandee) {
     static char vitesseActuelle = 1;
     signed char e, de;
 
-    // Obtient la vitesse actuelle selon la durée de phase actuelle:
-    // (On part de la vitesse précédente, pour écourter le nombre d'iterations)
+    // Obtient la vitesse actuelle selon la durÃ©e de phase actuelle:
+    // (On part de la vitesse prÃ©cÃ©dente, pour Ã©courter le nombre d'iterations)
     while( dureeDePhaseActuelle < dureeDePhaseParVitesse[vitesseActuelle + 1] ) {
         vitesseActuelle ++;
     }
@@ -100,7 +100,7 @@ unsigned char test_puissance() {
 
     int dureeDePhase, dureeDePhase0;
 
-    // Tests avec réponse sans inertie:
+    // Tests avec rÃ©ponse sans inertie:
     dureeDePhase = 1000;
     etablitPuissance(6);
     for (n = 0; n < 50; n++) {

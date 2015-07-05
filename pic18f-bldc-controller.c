@@ -18,45 +18,43 @@
  * Bits de configuration:
  */
 #pragma config FOSC = INTIO67  // Oscillateur interne, ports A6 et A7 comme IO.
-#pragma config IESO = OFF      // Pas d'embrouilles avec l'osc. au démarrage.
+#pragma config IESO = OFF      // Pas d'embrouilles avec l'osc. au dÃ©marrage.
 #pragma config FCMEN = OFF     // Pas de monitorage de l'oscillateur.
 
-// Nécessaires pour ICSP / ICD:
+// NÃ©cessaires pour ICSP / ICD:
 #pragma config MCLRE = EXTMCLR // RE3 est actif comme master reset.
 #pragma config WDTEN = OFF     // Watchdog inactif (pour ICSP /ICD)
 #pragma config LVP = OFF       // Single Supply Enable bits off.
 
-// Configure les sorties des PWM B et C pour ne pas interférer entre eux
-// et laisser libre le IOC0..3:
+// Configure les sorties des PWM B et C pour ne pas interfÃ©rer entre eux
 #pragma config CCP2MX = PORTC1  // P2A sur PORTC1
 #pragma config CCP3MX = PORTC6  // P3A sur PORTC6
-#pragma config P2BMX = PORTC0   // P2A sur PORTC0
 
 enum STATUS {
     /**
-     * Le moteur est en arrêt.
+     * Le moteur est en arrÃªt.
      */
     ARRET,
 
     /**
-     * Le moteur est en train de démarrer. Il n'est pas encore possible
-     * de calculer sa vitesse.
+     * Le moteur est en train de dÃ©marrer. Sa vitesse n'est pas suffisante
+     * pour mesurer le BEMF.
      */
     DEMARRAGE,
 
     /**
-     * Le moteur est en mouvement. Sa vitesse est stable ou
-     * elle varie lentement.
+     * Le moteur est en mouvement. Sa vitesse est suffisante pour mesurer
+     * le BEMF.
      */
     EN_MOUVEMENT,
 
     /**
-     * Le moteur est bloqué.
+     * Le moteur est bloquÃ©.
      */
-    BLOQUE,
+    BLOQUE
 };
 
-#define PUISSANCE_DEMARRAGE 12
+#define PUISSANCE_DEMARRAGE 40
 
 void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
     static enum STATUS status = ARRET;
@@ -65,23 +63,19 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
     static char phasesDepuisBlocage = 0;
     static unsigned char puissance = 0;
     static signed char vitesse = 0;
-
-
-    static unsigned char angle0 = 0;
-    unsigned char angle;
+    static enum DIRECTION direction = AVANT;
 
     static unsigned char phase0 = 0;
     unsigned char phase;
-
     unsigned char p;
 
     switch(status) {
         case ARRET:
             switch(ev->evenement) {
                 case TICTAC:
-                    ccp->ccpa = CCPR_MIN;
-                    ccp->ccpb = CCPR_MIN;
-                    ccp->ccpc = CCPR_MIN;
+                    ccp->ccpa = 0;
+                    ccp->ccpb = 0;
+                    ccp->ccpc = 0;
                     break;
 
                 case VITESSE:
@@ -90,6 +84,7 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
                         if (vitesse > VITESSE_MAX) {
                             vitesse = VITESSE_MAX;
                         }
+                        direction = AVANT;
                         puissance = PUISSANCE_DEMARRAGE;
                         phase0 = 0;
                         status = DEMARRAGE;
@@ -106,7 +101,7 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
                     phase = phaseSelonHall(ev->valeur);
                     if (phase != phase0) {
                         phase0 = phase;
-                        calculeAmplitudesArret(phase, ccp, puissance);
+                        calculeAmplitudesArret(puissance, direction, phase, ccp);
                     }
                     dureeDePhase ++;
                     break;
@@ -125,7 +120,7 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
                     phasesDepuisBlocage = 0;
                     dureeBlocage ++;
                     if (dureeBlocage > 5) {
-                        status = BLOQUE;
+                        // status = BLOQUE;
                     }
                     break;
 
@@ -133,85 +128,40 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
                     p = phaseSelonHallEtDirection(ev->valeur, AVANT);
                     if (p != ERROR) {
                         phase = p;
-
                         dureeBlocage = 0;
-
                         phasesDepuisBlocage ++;
-/*
-                        if (phasesDepuisBlocage > 6) {
-                            etablitPuissance(PUISSANCE_DEMARRAGE);
-                            angle = angleSelonPhaseEtDirection(phase, AVANT);
-                            corrigeAngleEtVitesse(angle, dureeDePhase);
-                            status = EN_MOUVEMENT;
-                        }
-*/
                         dureeDePhase = 0;
                     }
                     break;
             }
             break;
 
-        // Le moteur est en mouvement, on connait donc la durée de phase,
-        // et il est possible d'estimer l'angle actuel.
+        // Le moteur a atteint une vitesse de croisiÃ¨re, il est
+        // possible d'utiliser les dÃ©tecteurs hall pour dÃ©tecter les
+        // changements de phase.
         case EN_MOUVEMENT:
-            switch(ev->evenement) {
-                case TICTAC:
-                    angle = calculeAngle();
-                    if (angle != angle0) {
-                        angle0 = angle;
-                        calculeAmplitudesEnMouvement(angle, puissance, ccp);
-                    }
+            // Pas encore implÃ©mentÃ©.
+            // Passe directement en blocage.
 
-                    dureeDePhase ++;
-                    break;
-
-                case VITESSE:
-                    vitesse = (signed char) ev->valeur;
-                    if (vitesse < 5) {
-                        status = ARRET;
-                        if (vitesse > VITESSE_MAX) {
-                            vitesse = VITESSE_MAX;
-                        }
-                    }
-                    break;
-
-                case PHASE:
-                    phase = phaseSelonHallEtDirection(ev->valeur, AVANT);
-                    if (phase != ERROR) {
-                        angle = angleSelonPhaseEtDirection(phase, AVANT);
-                        corrigeAngleEtVitesse(angle, dureeDePhase);
-                        puissance = PUISSANCE_DEMARRAGE; //calculePuissance(dureeDePhase, vitesse);
-                        dureeDePhase = 0;
-                    }
-                    break;
-
-                case BLOCAGE:
-                    dureeBlocage = 0;
-                    phasesDepuisBlocage = 0;
-                    status = DEMARRAGE;
-                    break;
-            }
-            break;
-
-        // Il n'est pas possible de sortir d'un cas de blocage définitif.
+        // Il n'est pas possible de sortir d'un cas de blocage dÃ©finitif.
         case BLOQUE:
-            ccp->ccpa = CCPR_MIN;
-            ccp->ccpb = CCPR_MIN;
-            ccp->ccpc = CCPR_MIN;
+            ccp->ccpa = 0;
+            ccp->ccpb = 0;
+            ccp->ccpc = 0;
             break;
     }
 }
 #ifndef TEST
 
-#define PILOTAGE_AVEUGLE
-#undef  PILOTAGE_HALL
+#undef  PILOTAGE_AVEUGLE
+#define PILOTAGE_HALL
 
 #ifdef PILOTAGE_AVEUGLE
 
 #define TEMPS_BLOCAGE 1500
 
 /*
- * Valeur des détecteurs hall pour chaque phase.
+ * Valeur des dÃ©tecteurs hall pour chaque phase.
  */
 const unsigned char const hallParPhase[] = {
     0,
@@ -220,11 +170,11 @@ const unsigned char const hallParPhase[] = {
 };
 
 /**
- * Routine de traitement d'interruptions de basse priorité.
- * Pilotage du moteur à l'aveugle. Produit des événements de changement
- * de phase à une vitesse proportionnelle à la lecture du potentiomètre.
- * Sert à expérimenter avec les décalage entre tension moyenne appliquée
- * et vitesse de rotation.
+ * Routine de traitement d'interruptions.
+ * Pilotage du moteur Ã  l'aveugle. Produit des Ã©vÃ©nements de changement
+ * de phase Ã  une vitesse proportionnelle Ã  la lecture du potentiomÃ¨tre.
+ * Sert Ã  expÃ©rimenter avec les dÃ©calage entre tension moyenne appliquÃ©e
+ * et la vitesse de rotation.
  */
 void low_priority interrupt pilotageAveugle() {
     static unsigned char phase = 1;
@@ -267,9 +217,9 @@ void low_priority interrupt pilotageAveugle() {
             enfileEvenement(PHASE, hall);
         };
 
-        // Par mesure de sécurité, vérifie que le moteur tourne vraiment
+        // Par mesure de sï¿½curitï¿½, vï¿½rifie que le moteur tourne vraiment
         // et bloque l'alimentation si il reste trop longtemps sur
-        // la même position.
+        // la mï¿½me position.
         hall = PORTA & 7;
         if (hall != hall0) {
             tempsBlocage = TEMPS_BLOCAGE;
@@ -286,8 +236,8 @@ void low_priority interrupt pilotageAveugle() {
 #ifdef PILOTAGE_HALL
 #define TEMPS_BLOCAGE 3500
 /**
- * Routine de traitement d'interruptions de basse priorité.
- * Pilotage du moteur sur la base des détecteurs Hall.
+ * Routine de traitement d'interruptions de basse prioritï¿½.
+ * Pilotage du moteur sur la base des dï¿½tecteurs Hall.
  */
 void low_priority interrupt interruptionsBPTest() {
     unsigned char hall, srv_v;
@@ -327,7 +277,7 @@ void low_priority interrupt interruptionsBPTest() {
             enfileEvenement(BLOCAGE, 0);
         }
 
-        // Evenement VITESSE (lecture de l'entrée radiocommande sur RA4):
+        // Evenement VITESSE (lecture de l'entrï¿½e radiocommande sur RA4):
         srv_v = PORTA & 16;
         if (srv_v != 0) {
             vitesse ++;
@@ -347,13 +297,28 @@ void low_priority interrupt interruptionsBPTest() {
 #endif
 
 /**
- * Point d'entrée.
- * Active les PWM 1 à 3, en mode 'Demi pont', pour produire un PWM
- * à 62Khz, avec une précision de 1024 pas.
+ * Copie les valeurs CCP vers les sorties appropriÃ©es:
+ * @param ccp
+ */
+void etablit(struct CCP *ccp) {
+    CCPR1L = (ccp->ccpa == X ? 0 : ccp->ccpa);
+    PORTBbits.RB2 = (ccp->ccpa == 0 ? 1 : 0);
+
+    CCPR2L = (ccp->ccpb == X ? 0 : ccp->ccpb);
+    PORTCbits.RC0 = (ccp->ccpb == 0 ? 1 : 0);
+
+    CCPR3L = (ccp->ccpc == X ? 0 : ccp->ccpc);
+    PORTCbits.RC7 = (ccp->ccpc == 0 ? 1 : 0);
+}
+
+/**
+ * Point d'entrÃ©e.
+ * Active les PWM 1 Ã  3, en mode 'Demi pont', pour produire un PWM
+ * Ã  62Khz, avec une prÃ©cision de 1024 pas.
  */
 void main() {
     struct EVENEMENT_ET_VALEUR *ev;
-    struct EVENEMENT_ET_VALEUR vitesse10 = {VITESSE, 10};
+
     struct CCP ccp;
 
     // Configure le micro controleur pour 64MHz:
@@ -361,105 +326,103 @@ void main() {
     OSCTUNEbits.PLLEN = 1;  // Active le PLL.
 
     // Configure le module A/D:
-    ANSELA = 0b00100000; // Active AN4 (RA5) comme entrée analogique.
-    ANSELB = 0x00;       // Désactive les convertisseurs A/D.
-    ANSELC = 0x00;       // Désactive les convertisseurs A/D.
+    ANSELA = 0b00100000; // Active AN4 (RA5) comme entrï¿½e analogique.
+    ANSELB = 0x00;       // Dï¿½sactive les convertisseurs A/D.
+    ANSELC = 0x00;       // Dï¿½sactive les convertisseurs A/D.
 
     ADCON2bits.ADFM = 0; // Resultat justifie sur ADRESH.
     ADCON2bits.ACQT = 5; // Temps d'aquisition: 12 TAD
-    ADCON2bits.ADCS = 6; // TAD à 1uS pour Fosc = 64MHz
+    ADCON2bits.ADCS = 6; // TAD ï¿½ 1uS pour Fosc = 64MHz
 
     ADCON0bits.CHS = 4;  // Canal AN4 (RA5).
     ADCON0bits.ADON = 1; // Active le module A/D.
 
     // Configure les ports IO:
-    TRISA = 0xFF;       // Tous les bits du port A comme entrées.
+    TRISA = 0xFF;       // Tous les bits du port A comme entrï¿½es.
     TRISB = 0x00;       // Tous les bits du port B comme sorties.
     TRISC = 0x00;       // Tous les bits du port C comme sorties.
 
     // Active le temporisateur 1 (pour piloter les conversions A/D):
     T1CONbits.TMR1ON = 1;   // Active le temporisateur 1
     T1CONbits.TMR1CS = 0;   // Source: Fosc / 4
-    T1CONbits.T1CKPS = 0;   // Pas de division de fréquence.
+    T1CONbits.T1CKPS = 0;   // Pas de division de frï¿½quence.
     T1CONbits.T1RD16 = 1;   // Temporisateur de 16 bits.
 
-    // Active le temporisateur 2 (pour gérer les PWM):
+    // Active le temporisateur 2 (pour gï¿½rer les PWM):
     T2CONbits.TMR2ON = 1;
-    T2CONbits.T2CKPS = 1;   // Pas de division de fréquence.
-    T2CONbits.T2OUTPS = 0;  // Pas de division de fréquence.
-    PR2 = 255;              // Période max: 64MHz / (4 * 255) = 62kHz.
+    T2CONbits.T2CKPS = 1;   // Pas de division de frï¿½quence.
+    T2CONbits.T2OUTPS = 0;  // Pas de division de frï¿½quence.
+    PR2 = 255;              // Pï¿½riode max: 64MHz / (4 * 255) = 62kHz.
 
-    // Active les CCP 1 à 3, tous sur le TMR2:
-    CCP1CONbits.CCP1M = 12;         // Sorties P1A, P1B actives à niveau haut.
-    CCP1CONbits.P1M1 = 1;           // Contrôleur de demi pont (P1A et P1B).
-    PWM1CONbits.P1DC = TEMPS_MORT;  // Temps mort entre sorties complémentaires.
+    // Active les CCP 1 Ã  3, tous sur le TMR2:
+    CCP1CONbits.CCP1M = 12;         // Sorties P1A, P1B actives Ã  niveau haut.
+    CCP1CONbits.P1M = 0;           // ContrÃ´leur de demi pont (P1A et P1B).
+    PWM1CONbits.P1DC = TEMPS_MORT;  // Temps mort entre sorties complÃ©mentaires.
     CCPTMRS0bits.C1TSEL = 0;        // Utilise TMR2.
 
-    CCP2CONbits.CCP2M = 12;         // Sorties P2A et P2B actives à niveau haut.
-    CCP2CONbits.P2M1 = 1;           // Contrôleur de demi pont (P2A et P2B).
-    PWM2CONbits.P2DC = TEMPS_MORT;  // Temps mort entre sorties complémentaires.
+    CCP2CONbits.CCP2M = 12;         // Sorties P2A et P2B actives Ã  niveau haut.
+    CCP2CONbits.P2M1 = 0;           // ContrÃ´leur de demi pont (P2A et P2B).
+    PWM2CONbits.P2DC = TEMPS_MORT;  // Temps mort entre sorties complÃ©mentaires.
     CCPTMRS0bits.C2TSEL = 0;        // Utilise TMR2.
 
-    CCP3CONbits.CCP3M = 12;         // Sorties P3A et P3B actives à niveau haut.
-    CCP3CONbits.P3M1 = 1;           // Contrôleur de demi pont (P3A et P3B).
-    PWM3CONbits.P3DC = TEMPS_MORT;  // Temps mort entre sorties complémentaires.
+    CCP3CONbits.CCP3M = 12;         // Sorties P3A et P3B actives Ã  niveau haut.
+    CCP3CONbits.P3M1 = 0;           // ContrÃ´leur de demi pont (P3A et P3B).
+    PWM3CONbits.P3DC = TEMPS_MORT;  // Temps mort entre sorties complÃ©mentaires.
     CCPTMRS0bits.C3TSEL = 0;        // Utilise TMR2.
 
-    // Active les interruptions en général:
+    // Active les interruptions en gÃ©nÃ©ral:
     RCONbits.IPEN = 1;
     INTCONbits.GIEH = 1;
     INTCONbits.GIEL = 1;
 
     // Active les interruptions du temporisateur 1:
     PIE1bits.TMR1IE = 1;    // Active les interruptions.
-    IPR1bits.TMR1IP = 0;    // Interruptions de basse priorité.
+    IPR1bits.TMR1IP = 0;    // Interruptions de basse prioritÃ©.
     
     // Active les interruptions du temporisateur 2:
     PIE1bits.TMR2IE = 1;    // Active les interruptions.
-    IPR1bits.TMR2IP = 0;    // Interruptions de basse priorité.
+    IPR1bits.TMR2IP = 0;    // Interruptions de basse prioritÃ©.
 
-    // Surveille la file d'événements, et les traite au fur
-    // et à mesure:
+    // Surveille la file d'Ã©vÃ©nements, et les traite au fur
+    // et Ã  mesure:
     while(file_alerte == 0) {
         ev = defileEvenement();
         if (ev != 0) {
             machine(ev, &ccp);
-            CCPR1L = ccp.ccpa;
-            CCPR2L = ccp.ccpb;
-            CCPR3L = ccp.ccpc;
+            etablit(&ccp);
         }
     }
 
-    // La file a débordé:
-    CCPR1L = CCPR_MIN;
-    CCPR2L = CCPR_MIN;
-    CCPR3L = CCPR_MIN;
+    // La file a dÃ©bordÃ©:
+    CCPR1L = 0;
+    CCPR2L = 0;
+    CCPR3L = 0;
 
-    // Tout s'arrête:
+    // Tout s'arrÃªte:
     while(1);
 }
 #endif
 
 #ifdef TEST
 /**
- * Point d'entrée pour les tests unitaires.
+ * Point d'entrÃ©e pour les tests unitaires.
  */
 void main() {
     unsigned char ft = 0;
 
-    // Initialise la EUSART pour pouvoir écrire dans la console
-    // Activez la UART1 dans les propriétés du projet.
+    // Initialise la EUSART pour pouvoir Ã©crire dans la console
+    // Activez la UART1 dans les propriÃ©tÃ©s du projet.
     EUSART_Initialize();
     printf("Lancement des tests...\r\n");
 
-    // Exécution des tests:
+    // ExÃ©cution des tests:
     ft += test_moteur();
 
     ft += test_puissance();
 
     ft += test_file();
 
-    // Affiche le résultat des tests:
+    // Affiche le rÃ©sultat des tests:
     printf("%u tests en erreur\r\n",ft);
     SLEEP();
 }
