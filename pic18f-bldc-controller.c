@@ -153,8 +153,8 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
 }
 #ifndef TEST
 
-#undef  PILOTAGE_AVEUGLE
-#define PILOTAGE_HALL
+#define PILOTAGE_AVEUGLE
+#undef  PILOTAGE_HALL
 
 #ifdef PILOTAGE_AVEUGLE
 
