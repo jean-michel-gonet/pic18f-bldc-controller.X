@@ -1,21 +1,21 @@
 #ifndef __PUISSANCE_H
 #define __PUISSANCE_H
 
-#define VITESSE_MAX 29
+#define VITESSE_MAX 200
 
 /**
- * Etablit la puissance de départ.
- * Est utilisée pour initialiser la puissance à une valeur possible,
- * en particulier suite à un démarrage ou à une situation de blocage.
- * @param p La puissance de départ.
+ * Etablit la puissance de dï¿½part.
+ * Est utilisï¿½e pour initialiser la puissance ï¿½ une valeur possible,
+ * en particulier suite ï¿½ un dï¿½marrage ou ï¿½ une situation de blocage.
+ * @param p La puissance de dï¿½part.
  */
 void etablitPuissance(unsigned char p);
 
 /**
- * Calcule la puissance selon la vitesse demandée et la durée de la dernière phase.
- * @param dureeDePhase Durée de phase actuelle.
- * @param vitesse Vitesse demandée.
- * @return Puissance à appliquer.
+ * Calcule la puissance selon la vitesse demandï¿½e et la durï¿½e de la derniï¿½re phase.
+ * @param dureeDePhase Durï¿½e de phase actuelle.
+ * @param vitesse Vitesse demandï¿½e.
+ * @return Puissance ï¿½ appliquer.
  */
 unsigned char calculePuissance(int dureeDePhaseActuelle, unsigned char vitesseDemandee);
 

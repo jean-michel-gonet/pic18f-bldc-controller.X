@@ -54,15 +54,35 @@ enum STATUS {
     BLOQUE
 };
 
-#define PUISSANCE_DEMARRAGE 40
+
+signed char evalueVitesse(signed char v, enum DIRECTION *direction) {
+    signed char vitesse;
+
+    if (v < 0) {
+        *direction = ARRIERE;
+        vitesse = -v;
+    } else {
+        *direction = AVANT;
+        vitesse = v;
+    }
+
+    vitesse <<= 1;
+    if (vitesse > VITESSE_MAX) {
+        vitesse = VITESSE_MAX;
+    }
+
+    return vitesse;
+}
+
+#define PUISSANCE_DEMARRAGE 20
 
 void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
     static enum STATUS status = ARRET;
     static int dureeDePhase = 0;
     static char dureeBlocage = 0;
     static char phasesDepuisBlocage = 0;
+
     static unsigned char puissance = 0;
-    static signed char vitesse = 0;
     static enum DIRECTION direction = AVANT;
 
     static unsigned char phase0 = 0;
@@ -79,13 +99,8 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
                     break;
 
                 case VITESSE:
-                    vitesse = (signed char) ev->valeur;
-                    if (vitesse > 5) {
-                        if (vitesse > VITESSE_MAX) {
-                            vitesse = VITESSE_MAX;
-                        }
-                        direction = AVANT;
-                        puissance = PUISSANCE_DEMARRAGE;
+                    puissance = evalueVitesse((signed char) ev->valeur, &direction);
+                    if (puissance > PUISSANCE_DEMARRAGE) {
                         phase0 = 0;
                         status = DEMARRAGE;
                     }
@@ -107,12 +122,9 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
                     break;
 
                 case VITESSE:
-                    vitesse = (signed char) ev->valeur;
-                    if (vitesse < 5) {
+                    puissance = evalueVitesse((signed char) ev->valeur, &direction);
+                    if (puissance < PUISSANCE_DEMARRAGE) {
                         status = ARRET;
-                    }
-                    if (vitesse > VITESSE_MAX) {
-                        vitesse = VITESSE_MAX;
                     }
                     break;
 
@@ -120,12 +132,12 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
                     phasesDepuisBlocage = 0;
                     dureeBlocage ++;
                     if (dureeBlocage > 5) {
-                        // status = BLOQUE;
+                        status = BLOQUE;
                     }
                     break;
 
                 case PHASE:
-                    p = phaseSelonHallEtDirection(ev->valeur, AVANT);
+                    p = phaseSelonHallEtDirection(ev->valeur, direction);
                     if (p != ERROR) {
                         phase = p;
                         dureeBlocage = 0;
@@ -153,8 +165,8 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
 }
 #ifndef TEST
 
-#define PILOTAGE_AVEUGLE
-#undef  PILOTAGE_HALL
+#undef  PILOTAGE_AVEUGLE
+#define PILOTAGE_HALL
 
 #ifdef PILOTAGE_AVEUGLE
 
