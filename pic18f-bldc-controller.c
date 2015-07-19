@@ -76,8 +76,8 @@ signed char evalueVitesseDemandee(signed char v, enum DIRECTION *direction) {
 }
 
 #define PUISSANCE_DEMARRAGE 20
-#define VITESSE_DEMARRAGE 12
-#define VITESSE_ARRET 10
+#define VITESSE_DEMARRAGE 25
+#define VITESSE_ARRET 20
 
 void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
     static enum STATUS status = ARRET;
