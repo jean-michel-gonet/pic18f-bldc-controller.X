@@ -3,20 +3,20 @@
 #include "test.h"
 
 /**
- * Espace mémoire pour la file.
+ * Espace mï¿½moire pour la file.
  */
 struct EVENEMENT_ET_VALEUR file[8];
 
-/** Curseur d'entrée de la file. */
+/** Curseur d'entrï¿½e de la file. */
 unsigned char file_entree = 0;
 
 /** Curseur de sortie de la file. */
 unsigned char file_sortie = 0;
 
 /**
- * Ajoute un événement à la file.
- * @param evenement Événement.
- * @param valeur Valeur associée.
+ * Ajoute un ï¿½vï¿½nement ï¿½ la file.
+ * @param evenement ï¿½vï¿½nement.
+ * @param valeur Valeur associï¿½e.
  */
 void enfileEvenement(enum EVENEMENT evenement, unsigned char valeur) {
     struct EVENEMENT_ET_VALEUR *ev;
@@ -36,8 +36,8 @@ void enfileEvenement(enum EVENEMENT evenement, unsigned char valeur) {
 }
 
 /**
- * Récupère un événement de la file.
- * @return L'événement.
+ * Rï¿½cupï¿½re un ï¿½vï¿½nement de la file.
+ * @return L'ï¿½vï¿½nement.
  */
 struct EVENEMENT_ET_VALEUR *defileEvenement() {
     struct EVENEMENT_ET_VALEUR *ev;
@@ -61,29 +61,29 @@ unsigned char test_file() {
     struct EVENEMENT_ET_VALEUR *ev1;
     unsigned char n;
 
-    // Test A: file vide, puis ajout de 1 élément:
+    // Test A: file vide, puis ajout de 1 ï¿½lï¿½ment:
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-A-01");
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-A-02");
 
-    enfileEvenement(TICTAC, 10);
+    enfileEvenement(PHASE, 10);
     ev1 = defileEvenement();
-    ft += assertEqualsChar(TICTAC, ev1->evenement, "Q-A-10");
+    ft += assertEqualsChar(PHASE, ev1->evenement, "Q-A-10");
     ft += assertEqualsChar(10, ev1->valeur, "Q-A-20");
 
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-A-31");
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-A-32");
 
-    // Test B: file vide, puis ajout de 3 éléments:
-    enfileEvenement(TICTAC, 100);
-    enfileEvenement(PHASE, 110);
+    // Test B: file vide, puis ajout de 3 ï¿½lï¿½ments:
+    enfileEvenement(PHASE, 100);
+    enfileEvenement(VITESSE_DEMANDEE, 110);
     enfileEvenement(BLOCAGE, 120);
 
     ev1 = defileEvenement();
-    ft += assertEqualsChar(TICTAC, ev1->evenement, "Q-B-10");
+    ft += assertEqualsChar(PHASE, ev1->evenement, "Q-B-10");
     ft += assertEqualsChar(100, ev1->valeur, "Q-B-20");
 
     ev1 = defileEvenement();
-    ft += assertEqualsChar(PHASE, ev1->evenement, "Q-B-11");
+    ft += assertEqualsChar(VITESSE_DEMANDEE, ev1->evenement, "Q-B-11");
     ft += assertEqualsChar(110, ev1->valeur, "Q-B-21");
 
     ev1 = defileEvenement();
@@ -107,7 +107,7 @@ unsigned char test_file() {
         ft += assertEqualsChar(ev1->valeur, n, "Q-D-12");
     }
 
-    // Test C: Remplit la file et vérifie l'alerte:
+    // Test C: Remplit la file et vï¿½rifie l'alerte:
     for(n = 0; n < 7; n++) {
         enfileEvenement(BLOCAGE, n);
     }

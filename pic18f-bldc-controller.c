@@ -40,7 +40,7 @@ enum STATUS {
      * Le moteur est en train de démarrer. Sa vitesse n'est pas suffisante
      * pour mesurer le BEMF.
      */
-    DEMARRAGE,
+    MARCHE,
 
     /**
      * Le moteur est en mouvement. Sa vitesse est suffisante pour mesurer
@@ -54,8 +54,9 @@ enum STATUS {
     BLOQUE
 };
 
+#define VITESSE_MAX 100
 
-signed char evalueVitesse(signed char v, enum DIRECTION *direction) {
+signed char evalueVitesseDemandee(signed char v, enum DIRECTION *direction) {
     signed char vitesse;
 
     if (v < 0) {
@@ -75,12 +76,12 @@ signed char evalueVitesse(signed char v, enum DIRECTION *direction) {
 }
 
 #define PUISSANCE_DEMARRAGE 20
+#define VITESSE_DEMARRAGE 12
+#define VITESSE_ARRET 10
 
 void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
     static enum STATUS status = ARRET;
-    static int dureeDePhase = 0;
     static char dureeBlocage = 0;
-    static char phasesDepuisBlocage = 0;
 
     static unsigned char puissance = 0;
     static enum DIRECTION direction = AVANT;
@@ -89,51 +90,46 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
     unsigned char phase;
     unsigned char p;
 
+    static unsigned char vitesseDemandee, vitesseMesuree;
+
     switch(status) {
         case ARRET:
             switch(ev->evenement) {
-                case TICTAC:
+
+                case VITESSE_DEMANDEE:
+                    vitesseDemandee = evalueVitesseDemandee((signed char) ev->valeur, &direction);
+                    if (vitesseDemandee > VITESSE_DEMARRAGE) {
+                        puissance = calculePuissanceInitiale(vitesseMesuree, vitesseDemandee);
+                        calculeAmplitudes(puissance, direction, phase, ccp);
+                        status = MARCHE;
+                    }
+                    break;
+
+                case PHASE:
+                    phase = phaseSelonHall(ev->valeur);
+
+                default:
                     ccp->ccpa = 0;
                     ccp->ccpb = 0;
                     ccp->ccpc = 0;
                     break;
-
-                case VITESSE:
-                    puissance = evalueVitesse((signed char) ev->valeur, &direction);
-                    if (puissance > PUISSANCE_DEMARRAGE) {
-                        phase0 = 0;
-                        status = DEMARRAGE;
-                    }
-
-                default:
-                    break;
             }
             break;
 
-        case DEMARRAGE:
+        case MARCHE:
             switch(ev->evenement) {
-                case TICTAC:
-                    phase = phaseSelonHall(ev->valeur);
-                    if (phase != phase0) {
-                        phase0 = phase;
-                        calculeAmplitudesArret(puissance, direction, phase, ccp);
-                    }
-                    dureeDePhase ++;
-                    break;
 
-                case VITESSE:
-                    puissance = evalueVitesse((signed char) ev->valeur, &direction);
-                    if (puissance < PUISSANCE_DEMARRAGE) {
+                case VITESSE_DEMANDEE:
+                    vitesseDemandee = evalueVitesseDemandee((signed char) ev->valeur, &direction);
+                    if (vitesseDemandee < VITESSE_ARRET) {
                         status = ARRET;
                     }
                     break;
 
-                case BLOCAGE:
-                    phasesDepuisBlocage = 0;
-                    dureeBlocage ++;
-                    if (dureeBlocage > 5) {
-                        status = BLOQUE;
-                    }
+                case VITESSE_MESUREE:
+                    vitesseMesuree = ev->valeur;
+                    puissance = calculePuissance(vitesseMesuree, vitesseDemandee);
+                    calculeAmplitudes(puissance, direction, phase, ccp);
                     break;
 
                 case PHASE:
@@ -141,8 +137,15 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
                     if (p != ERROR) {
                         phase = p;
                         dureeBlocage = 0;
-                        phasesDepuisBlocage ++;
-                        dureeDePhase = 0;
+                        calculeAmplitudes(puissance, direction, phase, ccp);
+                    }
+                    break;
+
+                case BLOCAGE:
+                default:
+                    dureeBlocage ++;
+                    if (dureeBlocage > 3) {
+                        status = BLOQUE;
                     }
                     break;
             }
@@ -206,7 +209,7 @@ void low_priority interrupt pilotageAveugle() {
             vitesse += 30;
             ADCON0bits.GODONE = 1;
 
-            enfileEvenement(VITESSE, 10);
+            enfileEvenement(VITESSE_DEMANDEE, 10);
         }
     }
 
@@ -247,15 +250,20 @@ void low_priority interrupt pilotageAveugle() {
 
 #ifdef PILOTAGE_HALL
 #define TEMPS_BLOCAGE 3500
+#define TEMPS_MESURE_VITESSE 2656
+
 /**
  * Routine de traitement d'interruptions de basse priorit�.
  * Pilotage du moteur sur la base des d�tecteurs Hall.
  */
 void low_priority interrupt interruptionsBPTest() {
-    unsigned char hall, srv_v;
-    static unsigned char hall0 = 0, srv_v0 = 0;
+    unsigned char hall;
+    static unsigned char hall0 = 0;
     static unsigned char vitesse = 0;
     static unsigned int tempsDernierePhase = TEMPS_BLOCAGE;
+
+    static unsigned char nombreDePhases = 0;
+    static int tempsMesureVitesse = TEMPS_MESURE_VITESSE;
 
     // Traitement des conversion AD:
     if (PIR1bits.TMR1IF) {
@@ -263,7 +271,7 @@ void low_priority interrupt interruptionsBPTest() {
 
         if (!ADCON0bits.GODONE) {
             vitesse = ADRESH - 128;
-            enfileEvenement(VITESSE, vitesse);
+            enfileEvenement(VITESSE_DEMANDEE, vitesse);
             ADCON0bits.GODONE = 1;
         }
     }
@@ -272,15 +280,21 @@ void low_priority interrupt interruptionsBPTest() {
     if (PIR1bits.TMR2IF) {
         PIR1bits.TMR2IF = 0;
 
-        // Evenement TICTAC:
-        hall = PORTA & 7;
-        enfileEvenement(TICTAC, hall);
+        // Evenement vitesse mesuree:
+        if (-- tempsMesureVitesse == 0) {
+            enfileEvenement(VITESSE_MESUREE, nombreDePhases);
+
+            tempsMesureVitesse = TEMPS_MESURE_VITESSE;
+            nombreDePhases = 0;
+        }
 
         // Evenement PHASE:
+        hall = PORTA & 7;
         if (hall != hall0) {
             tempsDernierePhase = TEMPS_BLOCAGE;
             enfileEvenement(PHASE, hall);
             hall0 = hall;
+            nombreDePhases++;
         }
 
         // Evenement BLOCAGE:
@@ -289,21 +303,6 @@ void low_priority interrupt interruptionsBPTest() {
             enfileEvenement(BLOCAGE, 0);
         }
 
-        // Evenement VITESSE (lecture de l'entr�e radiocommande sur RA4):
-        srv_v = PORTA & 16;
-        if (srv_v != 0) {
-            vitesse ++;
-        }
-        if (srv_v != srv_v0) {
-            if (srv_v != 0) {
-                vitesse = 0;
-            } else {
-                vitesse <<= 1;
-                vitesse -= 90;
-                enfileEvenement(VITESSE, vitesse);
-            }
-            srv_v0 = srv_v;
-        }
     }
 }
 #endif

@@ -1,23 +1,24 @@
 #ifndef __PUISSANCE_H
 #define __PUISSANCE_H
 
-#define VITESSE_MAX 200
+/**
+ * Etablit la puissance de départ.
+ * Calcule la puissance à appliquer sans tenir compte de la variation de vitesse
+ * depuis de dernier calcul. Est utilisée pour effectuer le premier calcul
+ * de puissance, lorsque le moteur était en arrêt.
+ * @param vitesseMesuree Dernière vitesse mesurée. Normalement 0.
+ * @param vitesse Vitesse demandée.
+ * @return Puissance à appliquer.
+ */
+unsigned char calculePuissanceInitiale(unsigned char vitesseMesuree, unsigned char vitesseDemandee);
 
 /**
- * Etablit la puissance de d�part.
- * Est utilis�e pour initialiser la puissance � une valeur possible,
- * en particulier suite � un d�marrage ou � une situation de blocage.
- * @param p La puissance de d�part.
+ * Varie la puissance selon la vitesse demandée et la vitesse mesurée.
+ * @param vitesseMesuree Dernière vitesse mesurée (vitesse réelle, vitesse actuelle).
+ * @param vitesseDemandee Vitesse demandée.
+ * @return Puissance à appliquer.
  */
-void etablitPuissance(unsigned char p);
-
-/**
- * Calcule la puissance selon la vitesse demand�e et la dur�e de la derni�re phase.
- * @param dureeDePhase Dur�e de phase actuelle.
- * @param vitesse Vitesse demand�e.
- * @return Puissance � appliquer.
- */
-unsigned char calculePuissance(int dureeDePhaseActuelle, unsigned char vitesseDemandee);
+unsigned char calculePuissance(unsigned char vitesseMesuree, unsigned char vitesseDemandee);
 
 #ifdef TEST
 /**

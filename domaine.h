@@ -8,17 +8,18 @@
 #define CCPR_MIN 0
 
 enum EVENEMENT {
-    /** Fin de p�riode du PWM. */
-    TICTAC,
 
     /** Le moteur vient de changer de phase.*/
     PHASE,
 
-    /** Il s'est ecoul� trop de temps depuis le dernier changement de phase. */
+    /** Il s'est ecoulé trop de temps depuis le dernier changement de phase. */
     BLOCAGE,
 
-    /** La vitesse a �t� sp�cifi�e. */
-    VITESSE
+    /** La vitesse demandée a été spécifiée. */
+    VITESSE_DEMANDEE,
+
+    /** La vitesse actuelle a été mesurée. */
+    VITESSE_MESUREE
 };
 
 enum DIRECTION {

@@ -18,10 +18,10 @@ const unsigned char const pwmCParPhase[2][7] = { {OO, 1, X, 0, 0, X, 1}, {OO, 0,
  * @param direction AVANT ou ARRIERE.
  * @param ccp Structure pour les valeurs PWM.
  */
-void calculeAmplitudesArret(unsigned char puissance,
-                            enum DIRECTION direction,
-                            unsigned char phase,
-                            struct CCP *ccp) {
+void calculeAmplitudes(unsigned char puissance,
+                       enum DIRECTION direction,
+                       unsigned char phase,
+                       struct CCP *ccp) {
     unsigned char pwm;
 
     if ( (phase == 0) || (phase > 6) ) {
@@ -138,75 +138,75 @@ unsigned char test_calculeAmplitudesArret() {
     struct CCP ccp;
 
     // Phase inconnue:
-    calculeAmplitudesArret(puissance, AVANT, 0, &ccp);
+    calculeAmplitudes(puissance, AVANT, 0, &ccp);
     ft += assertEqualsChar(ccp.ccpa, 0, "CAA-0A");
     ft += assertEqualsChar(ccp.ccpb, 0, "CAA-0B");
     ft += assertEqualsChar(ccp.ccpc, 0, "CAA-0C");
 
-    calculeAmplitudesArret(puissance, AVANT, 7, &ccp);
+    calculeAmplitudes(puissance, AVANT, 7, &ccp);
     ft += assertEqualsChar(ccp.ccpa, 0, "CAA-0A");
     ft += assertEqualsChar(ccp.ccpb, 0, "CAA-0B");
     ft += assertEqualsChar(ccp.ccpc, 0, "CAA-0C");
 
     // Marche avant:
-    calculeAmplitudesArret(puissance, AVANT, 1, &ccp);
+    calculeAmplitudes(puissance, AVANT, 1, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         X, "CAV-1A");
     ft += assertEqualsChar(ccp.ccpb,         0, "CAV-1B");
     ft += assertEqualsChar(ccp.ccpc, puissance, "CAV-1C");
 
-    calculeAmplitudesArret(puissance, AVANT, 2, &ccp);
+    calculeAmplitudes(puissance, AVANT, 2, &ccp);
     ft += assertEqualsChar(ccp.ccpa, puissance, "CAV-2A");
     ft += assertEqualsChar(ccp.ccpb,         0, "CAV-2B");
     ft += assertEqualsChar(ccp.ccpc,         X, "CAV-2C");
 
-    calculeAmplitudesArret(puissance, AVANT, 3, &ccp);
+    calculeAmplitudes(puissance, AVANT, 3, &ccp);
     ft += assertEqualsChar(ccp.ccpa, puissance, "CAV-3A");
     ft += assertEqualsChar(ccp.ccpb,         X, "CAV-3B");
     ft += assertEqualsChar(ccp.ccpc,         0, "CAV-3C");
 
-    calculeAmplitudesArret(puissance, AVANT, 4, &ccp);
+    calculeAmplitudes(puissance, AVANT, 4, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         X, "CAV-4A");
     ft += assertEqualsChar(ccp.ccpb, puissance, "CAV-4B");
     ft += assertEqualsChar(ccp.ccpc,         0, "CAV-4C");
 
-    calculeAmplitudesArret(puissance, AVANT, 5, &ccp);
+    calculeAmplitudes(puissance, AVANT, 5, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         0, "CAV-5A");
     ft += assertEqualsChar(ccp.ccpb, puissance, "CAV-5B");
     ft += assertEqualsChar(ccp.ccpc,         X, "CAV-5C");
 
-    calculeAmplitudesArret(puissance, AVANT, 6, &ccp);
+    calculeAmplitudes(puissance, AVANT, 6, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         0, "CAV-6A");
     ft += assertEqualsChar(ccp.ccpb,         X, "CAV-6B");
     ft += assertEqualsChar(ccp.ccpc, puissance, "CAV-6C");
 
 
     // Marche arrière:
-    calculeAmplitudesArret(puissance, ARRIERE, 1, &ccp);
+    calculeAmplitudes(puissance, ARRIERE, 1, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         X, "CAR-1A");
     ft += assertEqualsChar(ccp.ccpb, puissance, "CAR-1B");
     ft += assertEqualsChar(ccp.ccpc,         0, "CAR-1C");
 
-    calculeAmplitudesArret(puissance, ARRIERE, 2, &ccp);
+    calculeAmplitudes(puissance, ARRIERE, 2, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         0, "CAR-2A");
     ft += assertEqualsChar(ccp.ccpb, puissance, "CAR-2B");
     ft += assertEqualsChar(ccp.ccpc,         X, "CAR-2C");
 
-    calculeAmplitudesArret(puissance, ARRIERE, 3, &ccp);
+    calculeAmplitudes(puissance, ARRIERE, 3, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         0, "CAR-3A");
     ft += assertEqualsChar(ccp.ccpb,         X, "CAR-3B");
     ft += assertEqualsChar(ccp.ccpc, puissance, "CAR-3C");
 
-    calculeAmplitudesArret(puissance, ARRIERE, 4, &ccp);
+    calculeAmplitudes(puissance, ARRIERE, 4, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         X, "CAR-4A");
     ft += assertEqualsChar(ccp.ccpb,         0, "CAR-4B");
     ft += assertEqualsChar(ccp.ccpc, puissance, "CAR-4C");
 
-    calculeAmplitudesArret(puissance, ARRIERE, 5, &ccp);
+    calculeAmplitudes(puissance, ARRIERE, 5, &ccp);
     ft += assertEqualsChar(ccp.ccpa, puissance, "CAR-5A");
     ft += assertEqualsChar(ccp.ccpb,         0, "CAR-5B");
     ft += assertEqualsChar(ccp.ccpc,         X, "CAR-5C");
 
-    calculeAmplitudesArret(puissance, ARRIERE, 6, &ccp);
+    calculeAmplitudes(puissance, ARRIERE, 6, &ccp);
     ft += assertEqualsChar(ccp.ccpa, puissance, "CAR-6A");
     ft += assertEqualsChar(ccp.ccpb,         X, "CAR-6B");
     ft += assertEqualsChar(ccp.ccpc,         0, "CAR-6C");

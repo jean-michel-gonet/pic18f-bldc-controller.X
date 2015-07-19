@@ -1,13 +1,9 @@
 #include "puissance.h"
 #include "test.h"
 
-/**
- * Correspondance entre vitesse et dur�e de phase.
- */
-const int const dureeDePhaseParVitesse[VITESSE_MAX + 1] = {
-    1250, 496, 307, 221, 172, 140, 117, 101, 88, 77, 69, 61, 55,
-    50, 45, 41, 37, 34, 31, 28, 26, 23, 21, 19, 17, 16, 14, 13, 11, 10
-};
+#define LIMITE_CROISSANCE_PUISSANCE 8
+#define PUISSANCE_MAXIMUM 200
+#define INITIALISATION_PID -32767
 
 /**
  * Puissance actuelle.
@@ -15,72 +11,62 @@ const int const dureeDePhaseParVitesse[VITESSE_MAX + 1] = {
 static unsigned char puissance = 0;
 
 /**
- * Erreur entre la vitesse demand�e et la vitesse actuelle.
- * La valeur -127 indique que l'erreur n'a pas encore �t� calcul�e.
+ * Erreur de vitesse précédent.
  */
-static signed char e0 = -127;
+static signed int e0 = INITIALISATION_PID;
 
 /**
  * Etablit la puissance de départ.
- * Est utilisée pour initialiser la puissance à une valeur possible,
- * en particulier suite à un démarrage ou à une situation de blocage.
- * @param p La puissance de départ.
- */
-void etablitPuissance(unsigned char p) {
-    puissance = p;
-    e0 = -127;
-}
-
-/**
- * Calcule la puissance selon la vitesse demandée et la durée de la dernière phase.
- * @param dureeDePhase Durée de phase actuelle.
+ * Calcule la puissance à appliquer sans tenir compte de la variation de vitesse
+ * depuis de dernier calcul. Est utilisée pour effectuer le premier calcul
+ * de puissance, lorsque le moteur était en arrêt.
+ * @param vitesseMesuree Dernière vitesse mesurée. Normalement 0.
  * @param vitesse Vitesse demandée.
  * @return Puissance à appliquer.
  */
-unsigned char calculePuissance(int dureeDePhaseActuelle, unsigned char vitesseDemandee) {
-    static char vitesseActuelle = 1;
-    signed char e, de;
+unsigned char calculePuissanceInitiale(unsigned char vitesseMesuree, unsigned char vitesseDemandee) {
+    puissance = 0;
+    e0 = INITIALISATION_PID;
 
-    // Obtient la vitesse actuelle selon la durée de phase actuelle:
-    // (On part de la vitesse précédente, pour écourter le nombre d'iterations)
-    while( dureeDePhaseActuelle < dureeDePhaseParVitesse[vitesseActuelle + 1] ) {
-        vitesseActuelle ++;
+    return calculePuissance(vitesseMesuree, vitesseDemandee);
+}
+
+/**
+ * Varie la puissance selon la vitesse demandée et la vitesse mesurée.
+ * @param vitesseMesuree Dernière vitesse mesurée (vitesse réelle, vitesse actuelle).
+ * @param vitesseDemandee Vitesse demandée.
+ * @return Puissance à appliquer.
+ */
+unsigned char calculePuissance(unsigned char vitesseMesuree, unsigned char vitesseDemandee) {
+    signed int e, de;
+    signed int dp;
+
+    // Erreur de vitesse:
+    e = vitesseDemandee - vitesseMesuree;
+
+    // Variation de l'erreur:
+    if (e0 != INITIALISATION_PID) {
+        de = e - e0;
+    } else {
+        de = 0;
     }
-    while( dureeDePhaseActuelle > dureeDePhaseParVitesse[vitesseActuelle - 1] ) {
-        vitesseActuelle --;
-    }
+    e0 = e;
 
-    // Limite la vitesse:
-    if (vitesseActuelle > VITESSE_MAX) {
-        vitesseActuelle = VITESSE_MAX;
-        puissance = 5;
-    }
-
-    // Effectue les calculs de PID:
-    else {
-        e = vitesseActuelle - vitesseDemandee;
-
-        if (e0 == -127) {
-            de = 0;
-        } else {
-            de = e - e0;
+    // Variation de puissance:
+    dp = e / 2  + de / 4;
+    if (dp > 0) {
+        if (dp > LIMITE_CROISSANCE_PUISSANCE) {
+            dp = 8;
         }
-        e0 = e;
-
-        if (vitesseActuelle < vitesseDemandee) {
-            if (de <= 0) {
-                puissance ++;
-            }
+        if (puissance < PUISSANCE_MAXIMUM) {
+            puissance +=dp;
         }
-        if (vitesseActuelle > vitesseDemandee) {
-            if (de >= 0) {
-                puissance --;
-            }
+    } else {
+        if (dp < -LIMITE_CROISSANCE_PUISSANCE) {
+            dp = -8;
         }
-
-        // Limite la puissance:
-        if (puissance > 40) {
-            puissance = 40;
+        if (puissance > LIMITE_CROISSANCE_PUISSANCE) {
+            puissance += dp;
         }
     }
 
@@ -98,53 +84,52 @@ unsigned char test_puissance() {
     unsigned char n;
     unsigned char puissance;
 
-    int dureeDePhase, dureeDePhase0;
+    int vitesseMesuree;
 
     // Tests avec réponse sans inertie:
-    dureeDePhase = 1000;
-    etablitPuissance(6);
+    vitesseMesuree = 0;
+    puissance = calculePuissanceInitiale(vitesseMesuree, 100);
     for (n = 0; n < 50; n++) {
-        puissance = calculePuissance(dureeDePhase, 15);
-        dureeDePhase = 200 - 5 * puissance;
+        vitesseMesuree = (puissance * 5) / 2;
+        puissance = calculePuissance(vitesseMesuree, 100);
     }
-    ft += assertMinMaxInt(dureeDePhase, 35, 46, "PID-05A");
+    ft += assertMinMaxInt(vitesseMesuree, 95, 105, "PID-ACC52");
 
-    dureeDePhase = 50;
-    etablitPuissance(30);
-    for (n = 0; n < 20; n++) {
-        puissance = calculePuissance(dureeDePhase, 15);
-        dureeDePhase = 200 - 5 * puissance;
-    }
-    ft += assertMinMaxInt(dureeDePhase, 35, 46, "PID-05B");
-
-    dureeDePhase = 1000;
-    etablitPuissance(6);
-    for (n = 0; n < 30; n++) {
-        puissance = calculePuissance(dureeDePhase, 15);
-        dureeDePhase = 200 - 6 * puissance;
-    }
-    ft += assertMinMaxInt(dureeDePhase, 35, 46, "PID-06A");
-
-    dureeDePhase = 10;
-    etablitPuissance(20);
-    for (n = 0; n < 30; n++) {
-        puissance = calculePuissance(dureeDePhase, 15);
-        dureeDePhase = 200 - 6 * puissance;
-    }
-    ft += assertMinMaxInt(dureeDePhase, 35, 46, "PID-06B");
-
-
-    // Tests avec inertie:
-    dureeDePhase0 = 1000;
-    dureeDePhase = 1000;
-    etablitPuissance(6);
     for (n = 0; n < 50; n++) {
-        puissance = calculePuissance(dureeDePhase, 15);
-        dureeDePhase = 200 - 6 * puissance;
-        dureeDePhase = (3 * dureeDePhase0 + dureeDePhase) / 4;
-        dureeDePhase0 = dureeDePhase;
+        vitesseMesuree = (puissance * 5) / 2;
+        puissance = calculePuissance(vitesseMesuree, 25);
     }
-    ft += assertMinMaxInt(dureeDePhase, 35, 46, "PID-06B");
+    ft += assertMinMaxInt(vitesseMesuree, 20, 30, "PID-DEC52");
+
+    vitesseMesuree = 0;
+    puissance = calculePuissanceInitiale(vitesseMesuree, 100);
+    for (n = 0; n < 50; n++) {
+        vitesseMesuree = (puissance * 2) / 5;
+        puissance = calculePuissance(vitesseMesuree, 100);
+    }
+    ft += assertMinMaxInt(vitesseMesuree, 95, 105, "PID-ACC25");
+
+    for (n = 0; n < 50; n++) {
+        vitesseMesuree = (puissance * 2) / 5;
+        puissance = calculePuissance(vitesseMesuree, 25);
+    }
+    ft += assertMinMaxInt(vitesseMesuree, 20, 30, "PID-DEC25");
+
+
+    // Tests avec réponse avec intertie:
+    vitesseMesuree = 0;
+    puissance = calculePuissanceInitiale(vitesseMesuree, 100);
+    for (n = 0; n < 50; n++) {
+        vitesseMesuree = (vitesseMesuree * 3 + (puissance * 5) / 2) / 4;
+        puissance = calculePuissance(vitesseMesuree, 100);
+    }
+    ft += assertMinMaxInt(vitesseMesuree, 95, 105, "PID-ACCI");
+
+    for (n = 0; n < 50; n++) {
+        vitesseMesuree = (vitesseMesuree * 3 + (puissance * 5) / 2) / 4;
+        puissance = calculePuissance(vitesseMesuree, 25);
+    }
+    ft += assertMinMaxInt(vitesseMesuree, 20, 30, "PID-DECI");
 
     return ft;
 }

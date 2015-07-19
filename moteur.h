@@ -27,7 +27,7 @@ struct CCP {
  * @param direction AVANT ou ARRIERE.
  * @param ccp Structure pour les valeurs PWM.
  */
-void calculeAmplitudesArret(unsigned char puissance,
+void calculeAmplitudes(unsigned char puissance,
                             enum DIRECTION direction,
                             unsigned char phase,
                             struct CCP *ccp);
