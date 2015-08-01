@@ -37,16 +37,16 @@ enum STATUS {
     ARRET,
 
     /**
+     * Le moteur démarre, mais n'a pas encore réussi à tourner un
+     * pas. La tension appliquée augmente progressivement jusqu'à
+     * une limite.
+     */
+    DEMARRAGE,
+    /**
      * Le moteur est en train de démarrer. Sa vitesse n'est pas suffisante
      * pour mesurer le BEMF.
      */
     MARCHE,
-
-    /**
-     * Le moteur est en mouvement. Sa vitesse est suffisante pour mesurer
-     * le BEMF.
-     */
-    EN_MOUVEMENT,
 
     /**
      * Le moteur est bloqué.
@@ -86,22 +86,22 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
     static unsigned char puissance = 0;
     static enum DIRECTION direction = AVANT;
 
-    static unsigned char phase0 = 0;
     unsigned char phase;
     unsigned char p;
 
     static unsigned char vitesseDemandee, vitesseMesuree;
 
     switch(status) {
+        // À l'arrêt on attend que la vitesse demandée dépasse un seuil,
+        // puis on lance la procédure de démarrage.
         case ARRET:
             switch(ev->evenement) {
 
                 case VITESSE_DEMANDEE:
                     vitesseDemandee = evalueVitesseDemandee((signed char) ev->valeur, &direction);
                     if (vitesseDemandee > VITESSE_DEMARRAGE) {
-                        puissance = calculePuissanceInitiale(vitesseMesuree, vitesseDemandee);
-                        calculeAmplitudes(puissance, direction, phase, ccp);
-                        status = MARCHE;
+                        puissance = calculePuissanceInitiale(0, vitesseDemandee);
+                        status = DEMARRAGE;
                     }
                     break;
 
@@ -116,6 +116,34 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
             }
             break;
 
+        // Au démarrage, la tension appliquée grandit progressivement, jusqu'à
+        // ce que le moteur donne un premier pas.
+        case DEMARRAGE:
+            switch(ev->evenement) {
+                case VITESSE_DEMANDEE:
+                    vitesseDemandee = evalueVitesseDemandee((signed char) ev->valeur, &direction);
+                    if (vitesseDemandee < VITESSE_ARRET) {
+                        status = ARRET;
+                    } else {
+                        puissance = calculePuissance(0, vitesseDemandee);
+                        calculeAmplitudes(puissance, direction, phase, ccp);
+                    }
+                    break;
+
+                case PHASE:
+                    phase = phaseSelonHall(ev->valeur);
+                    calculeAmplitudes(puissance, direction, phase, ccp);
+                    status = MARCHE;
+                    break;
+
+                case BLOCAGE:
+                    dureeBlocage ++;
+                    if (dureeBlocage > 3) {
+                        status = BLOQUE;
+                    }
+                    break;
+            }
+            break;
         case MARCHE:
             switch(ev->evenement) {
 
@@ -133,7 +161,7 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
                     break;
 
                 case PHASE:
-                    p = phaseSelonHallEtDirection(ev->valeur, direction);
+                    p = phaseSelonHall(ev->valeur);
                     if (p != ERROR) {
                         phase = p;
                         dureeBlocage = 0;
@@ -150,13 +178,6 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
                     break;
             }
             break;
-
-        // Le moteur a atteint une vitesse de croisière, il est
-        // possible d'utiliser les détecteurs hall pour détecter les
-        // changements de phase.
-        case EN_MOUVEMENT:
-            // Pas encore implémenté.
-            // Passe directement en blocage.
 
         // Il n'est pas possible de sortir d'un cas de blocage définitif.
         case BLOQUE:

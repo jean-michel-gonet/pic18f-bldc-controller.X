@@ -8,7 +8,7 @@
 #define CCPR_MIN 0
 
 enum EVENEMENT {
-
+    
     /** Le moteur vient de changer de phase.*/
     PHASE,
 
