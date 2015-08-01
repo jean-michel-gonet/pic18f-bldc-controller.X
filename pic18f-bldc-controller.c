@@ -75,7 +75,7 @@ signed char evalueVitesseDemandee(signed char v, enum DIRECTION *direction) {
     return vitesse;
 }
 
-#define PUISSANCE_DEMARRAGE 20
+#define TENSION_DEMARRAGE 20
 #define VITESSE_DEMARRAGE 25
 #define VITESSE_ARRET 20
 
@@ -83,7 +83,7 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
     static enum STATUS status = ARRET;
     static char dureeBlocage = 0;
 
-    static unsigned char puissance = 0;
+    static unsigned char tensionMoyenne = 0;
     static enum DIRECTION direction = AVANT;
 
     unsigned char phase;
@@ -100,7 +100,7 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
                 case VITESSE_DEMANDEE:
                     vitesseDemandee = evalueVitesseDemandee((signed char) ev->valeur, &direction);
                     if (vitesseDemandee > VITESSE_DEMARRAGE) {
-                        puissance = calculePuissanceInitiale(0, vitesseDemandee);
+                        tensionMoyenne = calculeTensionMoyenneInitiale(0, vitesseDemandee);
                         status = DEMARRAGE;
                     }
                     break;
@@ -125,14 +125,14 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
                     if (vitesseDemandee < VITESSE_ARRET) {
                         status = ARRET;
                     } else {
-                        puissance = calculePuissance(0, vitesseDemandee);
-                        calculeAmplitudes(puissance, direction, phase, ccp);
+                        tensionMoyenne = calculeTensionMoyenne(0, vitesseDemandee);
+                        calculeAmplitudes(tensionMoyenne, direction, phase, ccp);
                     }
                     break;
 
                 case PHASE:
                     phase = phaseSelonHall(ev->valeur);
-                    calculeAmplitudes(puissance, direction, phase, ccp);
+                    calculeAmplitudes(tensionMoyenne, direction, phase, ccp);
                     status = MARCHE;
                     break;
 
@@ -156,8 +156,8 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
 
                 case VITESSE_MESUREE:
                     vitesseMesuree = ev->valeur;
-                    puissance = calculePuissance(vitesseMesuree, vitesseDemandee);
-                    calculeAmplitudes(puissance, direction, phase, ccp);
+                    tensionMoyenne = calculeTensionMoyenne(vitesseMesuree, vitesseDemandee);
+                    calculeAmplitudes(tensionMoyenne, direction, phase, ccp);
                     break;
 
                 case PHASE:
@@ -165,7 +165,7 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
                     if (p != ERROR) {
                         phase = p;
                         dureeBlocage = 0;
-                        calculeAmplitudes(puissance, direction, phase, ccp);
+                        calculeAmplitudes(tensionMoyenne, direction, phase, ccp);
                     }
                     break;
 

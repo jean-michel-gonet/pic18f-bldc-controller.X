@@ -10,15 +10,15 @@ const unsigned char const pwmBParPhase[2][7] = { {OO, 0, 0, X, 1, 1, X}, {OO, 1,
 const unsigned char const pwmCParPhase[2][7] = { {OO, 1, X, 0, 0, X, 1}, {OO, 0, X, 1, 1, X, 0} };
 
 /**
- * Rend les valeurs PWM para rapport à la phase spécifiée, à la puissance
+ * Rend les valeurs PWM para rapport à la phase spécifiée, à la tension moyenne
  * et à la direction de rotation.
- * @param puissance Puissance à utiliser. Il est conseillé de ne pas utiliser
+ * @param tensionMoyenne Tension moyenne à utiliser. Il est conseillé de ne pas utiliser
  * une valeur trop forte ici, pour ne pas brûler le circuit.
  * @param phase Phase actuelle, entre 1 et 6.
  * @param direction AVANT ou ARRIERE.
  * @param ccp Structure pour les valeurs PWM.
  */
-void calculeAmplitudes(unsigned char puissance,
+void calculeAmplitudes(unsigned char tensionMoyenne,
                        enum DIRECTION direction,
                        unsigned char phase,
                        struct CCP *ccp) {
@@ -30,13 +30,13 @@ void calculeAmplitudes(unsigned char puissance,
         ccp->ccpc = 0;
     } else {
         pwm = pwmAParPhase[direction][phase];
-        ccp->ccpa = (pwm == 1 ? puissance : pwm);
+        ccp->ccpa = (pwm == 1 ? tensionMoyenne : pwm);
 
         pwm = pwmBParPhase[direction][phase];
-        ccp->ccpb = (pwm == 1 ? puissance : pwm);
+        ccp->ccpb = (pwm == 1 ? tensionMoyenne : pwm);
         
         pwm = pwmCParPhase[direction][phase];
-        ccp->ccpc = (pwm == 1 ? puissance : pwm);
+        ccp->ccpc = (pwm == 1 ? tensionMoyenne : pwm);
     }
 }
 
@@ -67,7 +67,7 @@ unsigned char phaseSelonHall(unsigned char hall) {
 
 /**
  * Calcule la phase en cours à partir de la lecture des senseurs hall.
- * Effectue également un contrôle de la lecture, pour v�rifier si elle est
+ * Effectue également un contrôle de la lecture, pour vérifier si elle est
  * possible. Ceci sert à éviter de compter des rebondissements ou du bruit
  * qui affecte la lecture des senseurs.
  * @param hall La valeur des senseurs hall: 0b*****yzx
@@ -134,80 +134,80 @@ unsigned char test_phaseSelonHall() {
 
 unsigned char test_calculeAmplitudesArret() {
     unsigned char ft = 0;
-    unsigned char puissance = 15;
+    unsigned char tension = 15;
     struct CCP ccp;
 
     // Phase inconnue:
-    calculeAmplitudes(puissance, AVANT, 0, &ccp);
+    calculeAmplitudes(tension, AVANT, 0, &ccp);
     ft += assertEqualsChar(ccp.ccpa, 0, "CAA-0A");
     ft += assertEqualsChar(ccp.ccpb, 0, "CAA-0B");
     ft += assertEqualsChar(ccp.ccpc, 0, "CAA-0C");
 
-    calculeAmplitudes(puissance, AVANT, 7, &ccp);
+    calculeAmplitudes(tension, AVANT, 7, &ccp);
     ft += assertEqualsChar(ccp.ccpa, 0, "CAA-0A");
     ft += assertEqualsChar(ccp.ccpb, 0, "CAA-0B");
     ft += assertEqualsChar(ccp.ccpc, 0, "CAA-0C");
 
     // Marche avant:
-    calculeAmplitudes(puissance, AVANT, 1, &ccp);
+    calculeAmplitudes(tension, AVANT, 1, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         X, "CAV-1A");
     ft += assertEqualsChar(ccp.ccpb,         0, "CAV-1B");
-    ft += assertEqualsChar(ccp.ccpc, puissance, "CAV-1C");
+    ft += assertEqualsChar(ccp.ccpc, tension, "CAV-1C");
 
-    calculeAmplitudes(puissance, AVANT, 2, &ccp);
-    ft += assertEqualsChar(ccp.ccpa, puissance, "CAV-2A");
+    calculeAmplitudes(tension, AVANT, 2, &ccp);
+    ft += assertEqualsChar(ccp.ccpa, tension, "CAV-2A");
     ft += assertEqualsChar(ccp.ccpb,         0, "CAV-2B");
     ft += assertEqualsChar(ccp.ccpc,         X, "CAV-2C");
 
-    calculeAmplitudes(puissance, AVANT, 3, &ccp);
-    ft += assertEqualsChar(ccp.ccpa, puissance, "CAV-3A");
+    calculeAmplitudes(tension, AVANT, 3, &ccp);
+    ft += assertEqualsChar(ccp.ccpa, tension, "CAV-3A");
     ft += assertEqualsChar(ccp.ccpb,         X, "CAV-3B");
     ft += assertEqualsChar(ccp.ccpc,         0, "CAV-3C");
 
-    calculeAmplitudes(puissance, AVANT, 4, &ccp);
+    calculeAmplitudes(tension, AVANT, 4, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         X, "CAV-4A");
-    ft += assertEqualsChar(ccp.ccpb, puissance, "CAV-4B");
+    ft += assertEqualsChar(ccp.ccpb, tension, "CAV-4B");
     ft += assertEqualsChar(ccp.ccpc,         0, "CAV-4C");
 
-    calculeAmplitudes(puissance, AVANT, 5, &ccp);
+    calculeAmplitudes(tension, AVANT, 5, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         0, "CAV-5A");
-    ft += assertEqualsChar(ccp.ccpb, puissance, "CAV-5B");
+    ft += assertEqualsChar(ccp.ccpb, tension, "CAV-5B");
     ft += assertEqualsChar(ccp.ccpc,         X, "CAV-5C");
 
-    calculeAmplitudes(puissance, AVANT, 6, &ccp);
+    calculeAmplitudes(tension, AVANT, 6, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         0, "CAV-6A");
     ft += assertEqualsChar(ccp.ccpb,         X, "CAV-6B");
-    ft += assertEqualsChar(ccp.ccpc, puissance, "CAV-6C");
+    ft += assertEqualsChar(ccp.ccpc, tension, "CAV-6C");
 
 
     // Marche arrière:
-    calculeAmplitudes(puissance, ARRIERE, 1, &ccp);
+    calculeAmplitudes(tension, ARRIERE, 1, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         X, "CAR-1A");
-    ft += assertEqualsChar(ccp.ccpb, puissance, "CAR-1B");
+    ft += assertEqualsChar(ccp.ccpb, tension, "CAR-1B");
     ft += assertEqualsChar(ccp.ccpc,         0, "CAR-1C");
 
-    calculeAmplitudes(puissance, ARRIERE, 2, &ccp);
+    calculeAmplitudes(tension, ARRIERE, 2, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         0, "CAR-2A");
-    ft += assertEqualsChar(ccp.ccpb, puissance, "CAR-2B");
+    ft += assertEqualsChar(ccp.ccpb, tension, "CAR-2B");
     ft += assertEqualsChar(ccp.ccpc,         X, "CAR-2C");
 
-    calculeAmplitudes(puissance, ARRIERE, 3, &ccp);
+    calculeAmplitudes(tension, ARRIERE, 3, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         0, "CAR-3A");
     ft += assertEqualsChar(ccp.ccpb,         X, "CAR-3B");
-    ft += assertEqualsChar(ccp.ccpc, puissance, "CAR-3C");
+    ft += assertEqualsChar(ccp.ccpc, tension, "CAR-3C");
 
-    calculeAmplitudes(puissance, ARRIERE, 4, &ccp);
+    calculeAmplitudes(tension, ARRIERE, 4, &ccp);
     ft += assertEqualsChar(ccp.ccpa,         X, "CAR-4A");
     ft += assertEqualsChar(ccp.ccpb,         0, "CAR-4B");
-    ft += assertEqualsChar(ccp.ccpc, puissance, "CAR-4C");
+    ft += assertEqualsChar(ccp.ccpc, tension, "CAR-4C");
 
-    calculeAmplitudes(puissance, ARRIERE, 5, &ccp);
-    ft += assertEqualsChar(ccp.ccpa, puissance, "CAR-5A");
+    calculeAmplitudes(tension, ARRIERE, 5, &ccp);
+    ft += assertEqualsChar(ccp.ccpa, tension, "CAR-5A");
     ft += assertEqualsChar(ccp.ccpb,         0, "CAR-5B");
     ft += assertEqualsChar(ccp.ccpc,         X, "CAR-5C");
 
-    calculeAmplitudes(puissance, ARRIERE, 6, &ccp);
-    ft += assertEqualsChar(ccp.ccpa, puissance, "CAR-6A");
+    calculeAmplitudes(tension, ARRIERE, 6, &ccp);
+    ft += assertEqualsChar(ccp.ccpa, tension, "CAR-6A");
     ft += assertEqualsChar(ccp.ccpb,         X, "CAR-6B");
     ft += assertEqualsChar(ccp.ccpc,         0, "CAR-6C");
 

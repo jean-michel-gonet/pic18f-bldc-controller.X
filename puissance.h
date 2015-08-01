@@ -10,7 +10,7 @@
  * @param vitesse Vitesse demandée.
  * @return Puissance à appliquer.
  */
-unsigned char calculePuissanceInitiale(unsigned char vitesseMesuree, unsigned char vitesseDemandee);
+unsigned char calculeTensionMoyenneInitiale(unsigned char vitesseMesuree, unsigned char vitesseDemandee);
 
 /**
  * Varie la puissance selon la vitesse demandée et la vitesse mesurée.
@@ -18,7 +18,7 @@ unsigned char calculePuissanceInitiale(unsigned char vitesseMesuree, unsigned ch
  * @param vitesseDemandee Vitesse demandée.
  * @return Puissance à appliquer.
  */
-unsigned char calculePuissance(unsigned char vitesseMesuree, unsigned char vitesseDemandee);
+unsigned char calculeTensionMoyenne(unsigned char vitesseMesuree, unsigned char vitesseDemandee);
 
 #ifdef TEST
 /**
