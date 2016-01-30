@@ -54,10 +54,10 @@ enum STATUS {
     BLOQUE
 };
 
-#define VITESSE_MAX 100
+#define VITESSE_MAX 180
 
-signed char evalueVitesseDemandee(signed char v, enum DIRECTION *direction) {
-    signed char vitesse;
+unsigned char evalueVitesseDemandee(signed char v, enum DIRECTION *direction) {
+    unsigned char vitesse;
 
     if (v < 0) {
         *direction = ARRIERE;
@@ -77,7 +77,7 @@ signed char evalueVitesseDemandee(signed char v, enum DIRECTION *direction) {
 
 #define TENSION_DEMARRAGE 20
 #define VITESSE_DEMARRAGE 25
-#define VITESSE_ARRET 20
+#define VITESSE_ARRET 10
 
 void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
     static enum STATUS status = ARRET;
@@ -189,87 +189,6 @@ void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
 }
 #ifndef TEST
 
-#undef  PILOTAGE_AVEUGLE
-#define PILOTAGE_HALL
-
-#ifdef PILOTAGE_AVEUGLE
-
-#define TEMPS_BLOCAGE 1500
-
-/*
- * Valeur des détecteurs hall pour chaque phase.
- */
-const unsigned char const hallParPhase[] = {
-    0,
-    1, 3, 2, 6, 4, 5,
-    0
-};
-
-/**
- * Routine de traitement d'interruptions.
- * Pilotage du moteur à l'aveugle. Produit des événements de changement
- * de phase à une vitesse proportionnelle à la lecture du potentiomètre.
- * Sert à expérimenter avec les décalage entre tension moyenne appliquée
- * et la vitesse de rotation.
- */
-void low_priority interrupt pilotageAveugle() {
-    static unsigned char phase = 1;
-    static unsigned char vitesse = 0;
-    static unsigned char tempsDernierePhase;
-    static unsigned int tempsBlocage = TEMPS_BLOCAGE;
-    
-    static unsigned char hall0 = 0;
-    unsigned char hall;
-
-    // Traitement des conversion AD:
-    if (PIR1bits.TMR1IF) {
-        PIR1bits.TMR1IF = 0;
-
-        if (!ADCON0bits.GODONE) {
-            vitesse = ADRESH >> 2;
-            vitesse += 30;
-            ADCON0bits.GODONE = 1;
-
-            enfileEvenement(VITESSE_DEMANDEE, 10);
-        }
-    }
-
-    // Traitement pour le moteur:
-    if (PIR1bits.TMR2IF) {
-        PIR1bits.TMR2IF = 0;
-
-        // Evenement TICTAC:
-        hall = hallParPhase[phase];
-        enfileEvenement(TICTAC, hall);
-
-        // Evenement PHASE:
-        if (--tempsDernierePhase == 0) {
-            tempsDernierePhase = vitesse;
-            phase++;
-            if (phase > 6) {
-                phase = 1;
-            }
-            hall = hallParPhase[phase];
-            enfileEvenement(PHASE, hall);
-        };
-
-        // Par mesure de s�curit�, v�rifie que le moteur tourne vraiment
-        // et bloque l'alimentation si il reste trop longtemps sur
-        // la m�me position.
-        hall = PORTA & 7;
-        if (hall != hall0) {
-            tempsBlocage = TEMPS_BLOCAGE;
-            hall0 = hall;
-        }
-        if (--tempsBlocage == 0) {
-            enfileEvenement(BLOCAGE, hall);
-            tempsBlocage = TEMPS_BLOCAGE;
-        }
-    }
-}
-#endif
-
-#ifdef PILOTAGE_HALL
 #define TEMPS_BLOCAGE 3500
 #define TEMPS_MESURE_VITESSE 2656
 
@@ -321,7 +240,7 @@ void low_priority interrupt interruptionsBPTest() {
         // Evenement BLOCAGE:
         if (tempsDernierePhase-- == 0) {
             tempsDernierePhase = TEMPS_BLOCAGE;
-            enfileEvenement(BLOCAGE, 0);
+            // enfileEvenement(BLOCAGE, 0);
         }
 
     }
@@ -334,7 +253,7 @@ void low_priority interrupt interruptionsBPTest() {
  */
 void etablit(struct CCP *ccp) {
     CCPR1L = (ccp->ccpa == X ? 0 : ccp->ccpa);
-    PORTBbits.RB2 = (ccp->ccpa == 0 ? 1 : 0);
+    PORTCbits.RC3 = (ccp->ccpa == 0 ? 1 : 0);
 
     CCPR2L = (ccp->ccpb == X ? 0 : ccp->ccpb);
     PORTCbits.RC0 = (ccp->ccpb == 0 ? 1 : 0);
@@ -353,26 +272,27 @@ void main() {
 
     struct CCP ccp;
 
+    // Configure tous les ports comme entrées:
+    TRISA = 0xFF;
+    TRISB = 0xFF;
+    TRISC = 0xFF;
+
+    
     // Configure le micro controleur pour 64MHz:
     OSCCONbits.IRCF = 7;    // Frequence de base: 16 MHz
     OSCTUNEbits.PLLEN = 1;  // Active le PLL.
 
     // Configure le module A/D:
-    ANSELA = 0b00100000; // Active AN4 (RA5) comme entr�e analogique.
-    ANSELB = 0x00;       // D�sactive les convertisseurs A/D.
-    ANSELC = 0x00;       // D�sactive les convertisseurs A/D.
+    ANSELA = 0x00;       // Désactive les convertisseurs A/D
+    ANSELB = 0b00000100; // Active AN8 / RB2 comme entrée analogique.
+    ANSELC = 0x00;       // Désactive les convertisseurs A/D.
 
     ADCON2bits.ADFM = 0; // Resultat justifie sur ADRESH.
     ADCON2bits.ACQT = 5; // Temps d'aquisition: 12 TAD
-    ADCON2bits.ADCS = 6; // TAD � 1uS pour Fosc = 64MHz
+    ADCON2bits.ADCS = 6; // TAD de 1uS pour Fosc = 64MHz
 
-    ADCON0bits.CHS = 4;  // Canal AN4 (RA5).
+    ADCON0bits.CHS = 8;  // Canal AN8 (RB2).
     ADCON0bits.ADON = 1; // Active le module A/D.
-
-    // Configure les ports IO:
-    TRISA = 0xFF;       // Tous les bits du port A comme entr�es.
-    TRISB = 0x00;       // Tous les bits du port B comme sorties.
-    TRISC = 0x00;       // Tous les bits du port C comme sorties.
 
     // Active le temporisateur 1 (pour piloter les conversions A/D):
     T1CONbits.TMR1ON = 1;   // Active le temporisateur 1
@@ -415,9 +335,17 @@ void main() {
     PIE1bits.TMR2IE = 1;    // Active les interruptions.
     IPR1bits.TMR2IP = 0;    // Interruptions de basse priorité.
 
+    // Configure les ports IO:
+    PORTA = 0;
+    PORTB = 0;
+    PORTC = 0;
+    TRISA = 0xFF;       // Tous les bits du port A comme entrées.
+    TRISB = 0b0011110;  // Entrées analogiques du port B.
+    TRISC = 0x00;       // Tous les bits du port C comme sorties.
+
     // Surveille la file d'événements, et les traite au fur
     // et à mesure:
-    while(file_alerte == 0) {
+    while(fileDeborde() == 0) {
         ev = defileEvenement();
         if (ev != 0) {
             machine(ev, &ccp);
@@ -433,7 +361,6 @@ void main() {
     // Tout s'arrête:
     while(1);
 }
-#endif
 
 #ifdef TEST
 /**

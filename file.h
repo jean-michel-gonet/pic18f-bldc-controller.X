@@ -4,32 +4,34 @@
 #include "domaine.h"
 
 /**
- * Groupe un événement et sa valeur associée.
+ * Groupe un Ã©vÃ©nement et sa valeur associÃ©e.
  */
 struct EVENEMENT_ET_VALEUR {
-    /** L'événement. */
+    /** L'Ã©vÃ©nement. */
     enum EVENEMENT evenement;
-    /** Sa valeur associée. */
+    /** Sa valeur associÃ©e. */
     unsigned char valeur;
 };
 
 /**
- * Si différent de zéro, alors la file a débordé.
- */
-unsigned char file_alerte = 0;
-
-/**
- * Ajoute un événement à la file.
- * @param evenement Événement.
- * @param valeur Valeur associée.
+ * Ajoute un Ã©vÃ©nement Ã  la file.
+ * @param evenement Ã©vÃ©nement.
+ * @param valeur Valeur associÃ©e.
  */
 void enfileEvenement(enum EVENEMENT evenement, unsigned char valeur);
 
 /**
- * Récupère un événement de la file.
- * @return L'événement.
+ * RÃ©cupÃ¨re un Ã©vÃ©nement de la file.
+ * @return L'Ã©vÃ©nement.
  */
 struct EVENEMENT_ET_VALEUR *defileEvenement();
+
+/**
+ * Indique si la file a dÃ©bordÃ©.
+ * @return 0 tant que la file n'a pas dÃ©bordÃ©.
+ */
+unsigned char fileDeborde();
+
 
 #ifdef TEST
 /**

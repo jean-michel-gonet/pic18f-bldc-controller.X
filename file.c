@@ -3,31 +3,34 @@
 #include "test.h"
 
 /**
- * Espace m�moire pour la file.
+ * Espace mémoire pour la file.
  */
 struct EVENEMENT_ET_VALEUR file[8];
 
-/** Curseur d'entr�e de la file. */
+/** Curseur d'entrée de la file. */
 unsigned char file_entree = 0;
 
 /** Curseur de sortie de la file. */
 unsigned char file_sortie = 0;
 
+/** Si différent de zéro, alors la file a débordé. */
+unsigned char file_deborde = 0;
+
 /**
- * Ajoute un �v�nement � la file.
- * @param evenement �v�nement.
- * @param valeur Valeur associ�e.
+ * Ajoute un événement à la file.
+ * @param evenement événement.
+ * @param valeur Valeur associée.
  */
 void enfileEvenement(enum EVENEMENT evenement, unsigned char valeur) {
     struct EVENEMENT_ET_VALEUR *ev;
 
-    if (file_alerte == 0) {
+    if (file_deborde == 0) {
         ev = &file[file_entree++];
 
         file_entree &= 7;
 
         if (file_entree == file_sortie) {
-            file_alerte = ERROR;
+            file_deborde = 1;
         }
 
         ev->evenement = evenement;
@@ -36,8 +39,8 @@ void enfileEvenement(enum EVENEMENT evenement, unsigned char valeur) {
 }
 
 /**
- * R�cup�re un �v�nement de la file.
- * @return L'�v�nement.
+ * Récupère un événement de la file.
+ * @return L'événement.
  */
 struct EVENEMENT_ET_VALEUR *defileEvenement() {
     struct EVENEMENT_ET_VALEUR *ev;
@@ -51,6 +54,14 @@ struct EVENEMENT_ET_VALEUR *defileEvenement() {
     return ev;
 }
 
+/**
+ * Indique si la file a débordé.
+ * @return 0 tant que la file n'a pas débordé.
+ */
+unsigned char fileDeborde() {
+    return file_deborde;
+}
+
 #ifdef TEST
 /**
  * Tests unitaires pour la file.
@@ -61,7 +72,7 @@ unsigned char test_file() {
     struct EVENEMENT_ET_VALEUR *ev1;
     unsigned char n;
 
-    // Test A: file vide, puis ajout de 1 �l�ment:
+    // Test A: file vide, puis ajout de 1 élément:
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-A-01");
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-A-02");
 
@@ -73,7 +84,7 @@ unsigned char test_file() {
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-A-31");
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-A-32");
 
-    // Test B: file vide, puis ajout de 3 �l�ments:
+    // Test B: file vide, puis ajout de 3 éléments:
     enfileEvenement(PHASE, 100);
     enfileEvenement(VITESSE_DEMANDEE, 110);
     enfileEvenement(BLOCAGE, 120);
@@ -107,13 +118,13 @@ unsigned char test_file() {
         ft += assertEqualsChar(ev1->valeur, n, "Q-D-12");
     }
 
-    // Test C: Remplit la file et v�rifie l'alerte:
+    // Test C: Remplit la file et vérifie l'alerte:
     for(n = 0; n < 7; n++) {
         enfileEvenement(BLOCAGE, n);
     }
-    ft += assertEqualsChar(file_alerte, 0, "Q-C-00");
+    ft += assertEqualsChar(fileDeborde(), 0, "Q-C-00");
     enfileEvenement(BLOCAGE, 10);
-    ft += assertEqualsChar(file_alerte, 255, "Q-C-01");
+    ft += assertEqualsChar(fileDeborde(), 1, "Q-C-01");
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-C-02");
     enfileEvenement(BLOCAGE, 10);
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-C-03");

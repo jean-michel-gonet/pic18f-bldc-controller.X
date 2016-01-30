@@ -40,40 +40,7 @@ unsigned char calculeTensionMoyenneInitiale(unsigned char vitesseMesuree, unsign
  * au cycle de travail d'un PWM).
  */
 unsigned char calculeTensionMoyenne(unsigned char vitesseMesuree, unsigned char vitesseDemandee) {
-    signed int e, de;
-    signed int dt;
-
-    // Erreur de vitesse:
-    e = vitesseDemandee - vitesseMesuree;
-
-    // Variation de l'erreur:
-    if (e0 != INITIALISATION_PID) {
-        de = e - e0;
-    } else {
-        de = 0;
-    }
-    e0 = e;
-
-    // Variation de tension:
-    dt = e / 2  + de / 4;
-    if (dt > 0) {
-        if (dt > LIMITE_CROISSANCE_TENSION) {
-            dt = 8;
-        }
-        if (tension < TENSION_MAXIMUM) {
-            tension +=dt;
-        }
-    } else {
-        if (dt < -LIMITE_CROISSANCE_TENSION) {
-            dt = -8;
-        }
-        if (tension > LIMITE_CROISSANCE_TENSION) {
-            tension += dt;
-        }
-    }
-
-    // Rend la tension:
-    return tension;
+    return vitesseDemandee;
 }
 
 #ifdef TEST
