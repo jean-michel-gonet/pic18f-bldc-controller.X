@@ -1,105 +1,198 @@
 #include "puissance.h"
 #include "test.h"
-
-#define LIMITE_CROISSANCE_TENSION 8
-#define TENSION_MAXIMUM 200
-#define INITIALISATION_PID -32767
+#include "tableauDeBord.h"
 
 /**
- * Tension actuelle.
+ * Calcule la tension moyenne à appliquer selon différence observée entre
+ * la vitesse mesuree et la vitesse demandée.
+ * @param vitesseMesuree Dernière vitesse mesurée.
+ * @param vitesseDemandee Dernière Vitesse demandée.
+ * @return Tension moyenne à appliquer sur le moteur.
  */
-static unsigned char tension = 0;
-
-/**
- * Erreur de vitesse précédent.
- */
-static signed int e0 = INITIALISATION_PID;
-
-/**
- * Etablit la tension moyenne de départ.
- * Calcule la tension moyenne à appliquer sans tenir compte de la variation de vitesse
- * depuis de dernier calcul. Est utilisée pour effectuer le premier calcul
- * de tension, lorsque le moteur était en arrêt.
- * @param vitesseMesuree Dernière vitesse mesurée. Normalement 0.
- * @param vitesse Vitesse demandée.
- * @return Tension moyenne à appliquer, entre 0 et 255 (correspond au cycle
- * de travail d'un PWM).
- */
-unsigned char calculeTensionMoyenneInitiale(unsigned char vitesseMesuree, unsigned char vitesseDemandee) {
-    tension = 0;
-    e0 = INITIALISATION_PID;
-
-    return calculeTensionMoyenne(vitesseMesuree, vitesseDemandee);
+MagnitudeEtDirection *calculeTensionMoyenne(MagnitudeEtDirection *vitesseMesuree, 
+                                            MagnitudeEtDirection *vitesseDemandee) {
+    static MagnitudeEtDirection tensionMoyenne;
+    tensionMoyenne.direction = vitesseDemandee->direction;
+    tensionMoyenne.magnitude = vitesseDemandee->magnitude;
+    return &tensionMoyenne;
 }
 
+#define VITESSE_MAX 180
 /**
- * Varie la tension moyenne à appliquer selon la vitesse demandée et la vitesse mesurée.
- * @param vitesseMesuree Dernière vitesse mesurée (vitesse réelle, vitesse actuelle).
- * @param vitesseDemandee Vitesse demandée.
- * @return Tension moyenne à appliquer sur le moteur, entre 0 et 255 (correspond
- * au cycle de travail d'un PWM).
+ * Évalue la vitesse demandée en termes de direction et de valeur absolue.
+ * @param lecture La lecture, en provenance du contrôle 
+ * pertinent (potentiomètre, radiocommande, etc).
+ * @return La vitesse demandée correspondante à la lecture.
  */
-unsigned char calculeTensionMoyenne(unsigned char vitesseMesuree, unsigned char vitesseDemandee) {
-    return vitesseDemandee;
+MagnitudeEtDirection *evalueVitesseDemandee(unsigned char lecture) {
+    static MagnitudeEtDirection vitesse;
+    signed char v = (signed char) lecture;
+    
+    if (v < 0) {
+        vitesse.direction = ARRIERE;
+        vitesse.magnitude = -v;
+    } else {
+        vitesse.direction = AVANT;
+        vitesse.magnitude = v;
+    }
+
+    vitesse.magnitude <<= 1;
+    if (vitesse.magnitude > VITESSE_MAX) {
+        vitesse.magnitude = VITESSE_MAX;
+    }
+
+    return &vitesse;
+}
+
+typedef enum {
+    ARRET,
+    MARCHE,
+    FREINAGE
+} EtatsMachinePuissance;
+
+#define VITESSE_DEMARRAGE 25
+#define VITESSE_ARRET 10
+
+/**
+ * Machine à états pour réguler la puissance (tension moyenne) appliquée
+ * au moteur.
+ * @param ev Événement à traiter.
+ */
+void PUISSANCE_machine(EvenementEtValeur *ev) {
+    static EtatsMachinePuissance etat = ARRET;
+    static MagnitudeEtDirection *vitesseMesuree, *vitesseDemandee;
+    MagnitudeEtDirection *tensionMoyenne;
+    
+    switch (etat) {
+        case ARRET:
+            switch(ev->evenement) {
+                case VITESSE_MESUREE:
+                    break;
+
+                case LECTURE_POTENTIOMETRE:
+                    vitesseDemandee = evalueVitesseDemandee(ev->valeur);
+                    if (vitesseDemandee->magnitude > VITESSE_ARRET) {
+                        tensionMoyenne = 
+                                calculeTensionMoyenne(0, vitesseDemandee);
+                        enfileMessageInterne(MOTEUR_TENSION_MOYENNE);
+                        etat = MARCHE;
+                    }
+                    break;
+            }
+            break;
+
+        case MARCHE:
+            switch(ev->evenement) {
+                case VITESSE_MESUREE:
+                    vitesseMesuree = &(tableauDeBord.vitesseMesuree);
+                    tensionMoyenne = 
+                            calculeTensionMoyenne(vitesseMesuree, vitesseDemandee);
+                    enfileMessageInterne(MOTEUR_TENSION_MOYENNE);
+                    break;
+
+                case LECTURE_POTENTIOMETRE:
+                    vitesseDemandee = evalueVitesseDemandee(ev->valeur);
+                    if (vitesseDemandee->direction != vitesseMesuree->direction) {
+                        etat = FREINAGE;
+                    }
+                    if (vitesseDemandee->magnitude < VITESSE_ARRET) {
+                        etat = FREINAGE;
+                    }
+                    break;
+            }
+            break;
+        case FREINAGE:
+            switch(ev->evenement) {
+                case VITESSE_MESUREE:                    
+                    vitesseMesuree = &(tableauDeBord.vitesseMesuree);
+                    if (vitesseMesuree->magnitude == 0) {
+                        etat = ARRET;
+                    }
+                    tensionMoyenne = calculeTensionMoyenne(vitesseMesuree, 0);
+                    break;
+            }
+            break;
+    }
 }
 
 #ifdef TEST
+
+unsigned char test_evalueVitesse() {
+    unsigned char testsEnErreur = 0;
+    MagnitudeEtDirection *vitesse;
+    
+    vitesse = evalueVitesseDemandee(0);
+    testsEnErreur += assertEqualsChar(vitesse->magnitude, 0, "VD01");
+
+    vitesse = evalueVitesseDemandee(128);
+    testsEnErreur += assertEqualsChar(vitesse->magnitude, 1, "VD02m");
+    testsEnErreur += assertEqualsChar(vitesse->direction, ARRIERE, "VD02d");
+
+    vitesse = evalueVitesseDemandee(1);
+    testsEnErreur += assertEqualsChar(vitesse->magnitude, 1, "VD03m");
+    testsEnErreur += assertEqualsChar(vitesse->direction, AVANT, "VD03d");
+
+    vitesse = evalueVitesseDemandee(255);
+    testsEnErreur += assertEqualsChar(vitesse->magnitude, 127, "VD04m");
+    testsEnErreur += assertEqualsChar(vitesse->direction, ARRIERE, "VD04d");
+
+    vitesse = evalueVitesseDemandee(127);
+    testsEnErreur += assertEqualsChar(vitesse->magnitude, 127, "VD05m");
+    testsEnErreur += assertEqualsChar(vitesse->direction, AVANT, "VD05d");
+    
+    return testsEnErreur;
+}
+
+unsigned char test_calculeTensionMoyenne() {
+    unsigned char testsEnErreur = 0;
+    MagnitudeEtDirection *tensionMoyenne;
+    MagnitudeEtDirection vitesseDemandee;
+    
+    vitesseDemandee.direction = AVANT;
+    vitesseDemandee.magnitude = 10;
+    tensionMoyenne = calculeTensionMoyenne(0, &vitesseDemandee);    
+    testsEnErreur += assertEqualsChar(tensionMoyenne->direction, AVANT, "CTM01");
+    testsEnErreur += assertEqualsChar(tensionMoyenne->magnitude, 10, "CTM01a");
+    
+    vitesseDemandee.direction = AVANT;
+    vitesseDemandee.magnitude = 100;
+    tensionMoyenne = calculeTensionMoyenne(0, &vitesseDemandee);    
+    testsEnErreur += assertEqualsChar(tensionMoyenne->direction, AVANT, "CTM02");
+    testsEnErreur += assertEqualsChar(tensionMoyenne->magnitude, 100, "CTM02a");
+    
+    vitesseDemandee.direction = ARRIERE;
+    vitesseDemandee.magnitude = 10;
+    tensionMoyenne = calculeTensionMoyenne(0, &vitesseDemandee);    
+    testsEnErreur += assertEqualsChar(tensionMoyenne->direction, ARRIERE, "CTM03");
+    testsEnErreur += assertEqualsChar(tensionMoyenne->magnitude, 10, "CTM03a");
+    
+    vitesseDemandee.direction = ARRIERE;
+    vitesseDemandee.magnitude = 100;
+    tensionMoyenne = calculeTensionMoyenne(0, &vitesseDemandee);    
+    testsEnErreur += assertEqualsChar(tensionMoyenne->direction, ARRIERE, "CTM04");
+    testsEnErreur += assertEqualsChar(tensionMoyenne->magnitude, 100, "CTM04a");
+    
+    return testsEnErreur;
+}
+
+unsigned char test_machinePuissance() {
+    unsigned char testsEnErreur = 0;
+
+ 
+    return testsEnErreur;
+}
+
 /**
  * Tests unitaires pour le calcul de tension.
  * @return Nombre de tests en erreur.
  */
 unsigned char test_puissance() {
-    unsigned char ft = 0;
-    unsigned char n;
-    unsigned char tension;
-
-    int vitesseMesuree;
-
-    // Tests avec réponse sans inertie:
-    vitesseMesuree = 0;
-    tension = calculeTensionMoyenneInitiale(vitesseMesuree, 100);
-    for (n = 0; n < 50; n++) {
-        vitesseMesuree = (tension * 5) / 2;
-        tension = calculeTensionMoyenne(vitesseMesuree, 100);
-    }
-    ft += assertMinMaxInt(vitesseMesuree, 95, 105, "PID-ACC52");
-
-    for (n = 0; n < 50; n++) {
-        vitesseMesuree = (tension * 5) / 2;
-        tension = calculeTensionMoyenne(vitesseMesuree, 25);
-    }
-    ft += assertMinMaxInt(vitesseMesuree, 20, 30, "PID-DEC52");
-
-    vitesseMesuree = 0;
-    tension = calculeTensionMoyenneInitiale(vitesseMesuree, 100);
-    for (n = 0; n < 50; n++) {
-        vitesseMesuree = (tension * 2) / 5;
-        tension = calculeTensionMoyenne(vitesseMesuree, 100);
-    }
-    ft += assertMinMaxInt(vitesseMesuree, 95, 105, "PID-ACC25");
-
-    for (n = 0; n < 50; n++) {
-        vitesseMesuree = (tension * 2) / 5;
-        tension = calculeTensionMoyenne(vitesseMesuree, 25);
-    }
-    ft += assertMinMaxInt(vitesseMesuree, 20, 30, "PID-DEC25");
-
-
-    // Tests avec réponse avec intertie:
-    vitesseMesuree = 0;
-    tension = calculeTensionMoyenneInitiale(vitesseMesuree, 100);
-    for (n = 0; n < 50; n++) {
-        vitesseMesuree = (vitesseMesuree * 3 + (tension * 5) / 2) / 4;
-        tension = calculeTensionMoyenne(vitesseMesuree, 100);
-    }
-    ft += assertMinMaxInt(vitesseMesuree, 95, 105, "PID-ACCI");
-
-    for (n = 0; n < 50; n++) {
-        vitesseMesuree = (vitesseMesuree * 3 + (tension * 5) / 2) / 4;
-        tension = calculeTensionMoyenne(vitesseMesuree, 25);
-    }
-    ft += assertMinMaxInt(vitesseMesuree, 20, 30, "PID-DECI");
-
-    return ft;
+    unsigned char testsEnErreur = 0;
+    
+    testsEnErreur += test_evalueVitesse();
+    testsEnErreur += test_calculeTensionMoyenne();
+    testsEnErreur += test_machinePuissance();
+    
+    return testsEnErreur;
 }
 #endif

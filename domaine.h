@@ -7,24 +7,84 @@
 #define TEMPS_MORT 12
 #define CCPR_MIN 0
 
-enum EVENEMENT {
-    
+/**
+ * Liste des événements du système.
+ */
+typedef enum EVENEMENT {
+    /** L'intervale de temps qui sert de base de calcul s'est écoulé.*/
+    BASE_DE_TEMPS,
+            
     /** Le moteur vient de changer de phase.*/
-    PHASE,
+    MOTEUR_PHASE,
 
-    /** Il s'est ecoulé trop de temps depuis le dernier changement de phase. */
-    BLOCAGE,
+    /** Le moteur est bloqué (il s'est ecoulé trop de temps depuis le dernier changement de phase). */
+    MOTEUR_BLOCAGE,
 
-    /** La vitesse demandée a été spécifiée. */
+    /** La tension moyenne à appliquer au moteur à changé. */
+    MOTEUR_TENSION_MOYENNE,
+            
+            /***/
+    MOTEUR_PWM,
+
+    /** Lecture du potentiomètre.*/
+    LECTURE_POTENTIOMETRE,
+    
+    /** Lecture de la tension d'alimentation. */
+    LECTURE_ALIMENTATION,
+    
+    /** Lecture du courant consommé par le moteur. */
+    LECTURE_COURANT,
+    
+    /** Lecture de la température du moteur. */
+    LECTURE_TEMPERATURE,
+    
+    /** Lecture de l'entrée Avant/Arrière de la radiocommande. */
+    LECTURE_RC_AVANT_ARRIERE,
+    
+    /** Lecture de l'entrée Gauche/Droite de la radiocommande. */
+    LECTURE_RC_GAUCHE_DROITE,
+    
+    /** La vitesse demandée pour le moteur a été spécifiée / modifiée. */
     VITESSE_DEMANDEE,
 
-    /** La vitesse actuelle a été mesurée. */
-    VITESSE_MESUREE
-};
+    /** La vitesse actuelle du moteur a été mesurée. */
+    VITESSE_MESUREE,
+        
+            
+             
+} Evenement;
 
-enum DIRECTION {
+/** Pour indiquer le signe d'une magnitude absolue.*/
+typedef enum DIRECTION {
+    /** Marche avant. */
     AVANT,
-    ARRIERE
-};
+    /** Marche arrière. */
+    ARRIERE,
+    /** La direction n'est pas connue. */
+    INDETERMINEE,
+    /** La magnitude est signée. */
+    SIGNEE,
+    /** La magnitude est positive. */
+    POSITIVE
+} Direction;
+
+/**
+ * Groupe un événement et sa valeur associée.
+ */
+typedef struct EVENEMENT_ET_VALEUR {
+    /** L'événement. */
+    enum EVENEMENT evenement;
+    /** Sa valeur associée. */
+    unsigned char valeur;
+} EvenementEtValeur;
+
+/** 
+ * Décrit une valeur en termes de direction et de magnitude. 
+ * Sert à spécifier des vitesses ou des puissances.
+ */
+typedef struct {
+    Direction direction;
+    unsigned char magnitude;
+} MagnitudeEtDirection;
 
 #endif

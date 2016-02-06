@@ -30,171 +30,14 @@
 #pragma config CCP2MX = PORTC1  // P2A sur PORTC1
 #pragma config CCP3MX = PORTC6  // P3A sur PORTC6
 
-enum STATUS {
-    /**
-     * Le moteur est en arrêt.
-     */
-    ARRET,
-
-    /**
-     * Le moteur démarre, mais n'a pas encore réussi à tourner un
-     * pas. La tension appliquée augmente progressivement jusqu'à
-     * une limite.
-     */
-    DEMARRAGE,
-    /**
-     * Le moteur est en train de démarrer. Sa vitesse n'est pas suffisante
-     * pour mesurer le BEMF.
-     */
-    MARCHE,
-
-    /**
-     * Le moteur est bloqué.
-     */
-    BLOQUE
-};
-
-#define VITESSE_MAX 180
-
-unsigned char evalueVitesseDemandee(signed char v, enum DIRECTION *direction) {
-    unsigned char vitesse;
-
-    if (v < 0) {
-        *direction = ARRIERE;
-        vitesse = -v;
-    } else {
-        *direction = AVANT;
-        vitesse = v;
-    }
-
-    vitesse <<= 1;
-    if (vitesse > VITESSE_MAX) {
-        vitesse = VITESSE_MAX;
-    }
-
-    return vitesse;
-}
-
-#define TENSION_DEMARRAGE 20
-#define VITESSE_DEMARRAGE 25
-#define VITESSE_ARRET 10
-
-void machine(struct EVENEMENT_ET_VALEUR *ev, struct CCP *ccp) {
-    static enum STATUS status = ARRET;
-    static char dureeBlocage = 0;
-
-    static unsigned char tensionMoyenne = 0;
-    static enum DIRECTION direction = AVANT;
-
-    unsigned char phase;
-    unsigned char p;
-
-    static unsigned char vitesseDemandee, vitesseMesuree;
-
-    switch(status) {
-        // À l'arrêt on attend que la vitesse demandée dépasse un seuil,
-        // puis on lance la procédure de démarrage.
-        case ARRET:
-            switch(ev->evenement) {
-
-                case VITESSE_DEMANDEE:
-                    vitesseDemandee = evalueVitesseDemandee((signed char) ev->valeur, &direction);
-                    if (vitesseDemandee > VITESSE_DEMARRAGE) {
-                        tensionMoyenne = calculeTensionMoyenneInitiale(0, vitesseDemandee);
-                        status = DEMARRAGE;
-                    }
-                    break;
-
-                case PHASE:
-                    phase = phaseSelonHall(ev->valeur);
-
-                default:
-                    ccp->ccpa = 0;
-                    ccp->ccpb = 0;
-                    ccp->ccpc = 0;
-                    break;
-            }
-            break;
-
-        // Au démarrage, la tension appliquée grandit progressivement, jusqu'à
-        // ce que le moteur donne un premier pas.
-        case DEMARRAGE:
-            switch(ev->evenement) {
-                case VITESSE_DEMANDEE:
-                    vitesseDemandee = evalueVitesseDemandee((signed char) ev->valeur, &direction);
-                    if (vitesseDemandee < VITESSE_ARRET) {
-                        status = ARRET;
-                    } else {
-                        tensionMoyenne = calculeTensionMoyenne(0, vitesseDemandee);
-                        calculeAmplitudes(tensionMoyenne, direction, phase, ccp);
-                    }
-                    break;
-
-                case PHASE:
-                    phase = phaseSelonHall(ev->valeur);
-                    calculeAmplitudes(tensionMoyenne, direction, phase, ccp);
-                    status = MARCHE;
-                    break;
-
-                case BLOCAGE:
-                    dureeBlocage ++;
-                    if (dureeBlocage > 3) {
-                        status = BLOQUE;
-                    }
-                    break;
-            }
-            break;
-        case MARCHE:
-            switch(ev->evenement) {
-
-                case VITESSE_DEMANDEE:
-                    vitesseDemandee = evalueVitesseDemandee((signed char) ev->valeur, &direction);
-                    if (vitesseDemandee < VITESSE_ARRET) {
-                        status = ARRET;
-                    }
-                    break;
-
-                case VITESSE_MESUREE:
-                    vitesseMesuree = ev->valeur;
-                    tensionMoyenne = calculeTensionMoyenne(vitesseMesuree, vitesseDemandee);
-                    calculeAmplitudes(tensionMoyenne, direction, phase, ccp);
-                    break;
-
-                case PHASE:
-                    p = phaseSelonHall(ev->valeur);
-                    if (p != ERROR) {
-                        phase = p;
-                        dureeBlocage = 0;
-                        calculeAmplitudes(tensionMoyenne, direction, phase, ccp);
-                    }
-                    break;
-
-                case BLOCAGE:
-                default:
-                    dureeBlocage ++;
-                    if (dureeBlocage > 3) {
-                        status = BLOQUE;
-                    }
-                    break;
-            }
-            break;
-
-        // Il n'est pas possible de sortir d'un cas de blocage définitif.
-        case BLOQUE:
-            ccp->ccpa = 0;
-            ccp->ccpb = 0;
-            ccp->ccpc = 0;
-            break;
-    }
-}
 #ifndef TEST
 
 #define TEMPS_BLOCAGE 3500
 #define TEMPS_MESURE_VITESSE 2656
 
 /**
- * Routine de traitement d'interruptions de basse priorit�.
- * Pilotage du moteur sur la base des d�tecteurs Hall.
+ * Routine de traitement d'interruptions de basse priorité.
+ * Pilotage du moteur sur la base des détecteurs Hall.
  */
 void low_priority interrupt interruptionsBPTest() {
     unsigned char hall;
@@ -232,7 +75,7 @@ void low_priority interrupt interruptionsBPTest() {
         hall = PORTA & 7;
         if (hall != hall0) {
             tempsDernierePhase = TEMPS_BLOCAGE;
-            enfileEvenement(PHASE, hall);
+            enfileEvenement(MOTEUR_PHASE, hall);
             hall0 = hall;
             nombreDePhases++;
         }
@@ -244,22 +87,6 @@ void low_priority interrupt interruptionsBPTest() {
         }
 
     }
-}
-#endif
-
-/**
- * Copie les valeurs CCP vers les sorties appropriées:
- * @param ccp
- */
-void etablit(struct CCP *ccp) {
-    CCPR1L = (ccp->ccpa == X ? 0 : ccp->ccpa);
-    PORTCbits.RC3 = (ccp->ccpa == 0 ? 1 : 0);
-
-    CCPR2L = (ccp->ccpb == X ? 0 : ccp->ccpb);
-    PORTCbits.RC0 = (ccp->ccpb == 0 ? 1 : 0);
-
-    CCPR3L = (ccp->ccpc == X ? 0 : ccp->ccpc);
-    PORTCbits.RC7 = (ccp->ccpc == 0 ? 1 : 0);
 }
 
 /**
@@ -348,7 +175,7 @@ void main() {
     while(fileDeborde() == 0) {
         ev = defileEvenement();
         if (ev != 0) {
-            machine(ev, &ccp);
+            MOTEUR_machine(ev, &ccp);
             etablit(&ccp);
         }
     }
@@ -362,7 +189,7 @@ void main() {
     while(1);
 }
 
-#ifdef TEST
+#else
 /**
  * Point d'entrée pour les tests unitaires.
  */

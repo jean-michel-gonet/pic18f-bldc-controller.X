@@ -1,17 +1,7 @@
-#ifndef __FILE_H
-#define __FILE_H
-
 #include "domaine.h"
 
-/**
- * Groupe un événement et sa valeur associée.
- */
-struct EVENEMENT_ET_VALEUR {
-    /** L'événement. */
-    enum EVENEMENT evenement;
-    /** Sa valeur associée. */
-    unsigned char valeur;
-};
+#ifndef __FILE_H
+#define __FILE_H
 
 /**
  * Ajoute un événement à la file.

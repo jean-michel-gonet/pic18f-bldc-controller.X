@@ -76,21 +76,21 @@ unsigned char test_file() {
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-A-01");
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-A-02");
 
-    enfileEvenement(PHASE, 10);
+    enfileEvenement(MOTEUR_PHASE, 10);
     ev1 = defileEvenement();
-    ft += assertEqualsChar(PHASE, ev1->evenement, "Q-A-10");
+    ft += assertEqualsChar(MOTEUR_PHASE, ev1->evenement, "Q-A-10");
     ft += assertEqualsChar(10, ev1->valeur, "Q-A-20");
 
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-A-31");
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-A-32");
 
     // Test B: file vide, puis ajout de 3 éléments:
-    enfileEvenement(PHASE, 100);
+    enfileEvenement(MOTEUR_PHASE, 100);
     enfileEvenement(VITESSE_DEMANDEE, 110);
-    enfileEvenement(BLOCAGE, 120);
+    enfileEvenement(MOTEUR_BLOCAGE, 120);
 
     ev1 = defileEvenement();
-    ft += assertEqualsChar(PHASE, ev1->evenement, "Q-B-10");
+    ft += assertEqualsChar(MOTEUR_PHASE, ev1->evenement, "Q-B-10");
     ft += assertEqualsChar(100, ev1->valeur, "Q-B-20");
 
     ev1 = defileEvenement();
@@ -98,7 +98,7 @@ unsigned char test_file() {
     ft += assertEqualsChar(110, ev1->valeur, "Q-B-21");
 
     ev1 = defileEvenement();
-    ft += assertEqualsChar(BLOCAGE, ev1->evenement, "Q-B-12");
+    ft += assertEqualsChar(MOTEUR_BLOCAGE, ev1->evenement, "Q-B-12");
     ft += assertEqualsChar(120, ev1->valeur, "Q-B-22");
 
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-B-31");
@@ -106,27 +106,27 @@ unsigned char test_file() {
 
     // Teste plusieurs tours de file:
     for (n = 0; n < 255; n++) {
-        enfileEvenement(PHASE, n);
-        enfileEvenement(BLOCAGE, n);
+        enfileEvenement(MOTEUR_PHASE, n);
+        enfileEvenement(MOTEUR_BLOCAGE, n);
 
         ev1 = defileEvenement();
-        ft += assertEqualsChar(ev1->evenement, PHASE, "Q-D-01");
+        ft += assertEqualsChar(ev1->evenement, MOTEUR_PHASE, "Q-D-01");
         ft += assertEqualsChar(ev1->valeur, n, "Q-D-02");
 
         ev1 = defileEvenement();
-        ft += assertEqualsChar(ev1->evenement, BLOCAGE, "Q-D-11");
+        ft += assertEqualsChar(ev1->evenement, MOTEUR_BLOCAGE, "Q-D-11");
         ft += assertEqualsChar(ev1->valeur, n, "Q-D-12");
     }
 
     // Test C: Remplit la file et vérifie l'alerte:
     for(n = 0; n < 7; n++) {
-        enfileEvenement(BLOCAGE, n);
+        enfileEvenement(MOTEUR_BLOCAGE, n);
     }
     ft += assertEqualsChar(fileDeborde(), 0, "Q-C-00");
-    enfileEvenement(BLOCAGE, 10);
+    enfileEvenement(MOTEUR_BLOCAGE, 10);
     ft += assertEqualsChar(fileDeborde(), 1, "Q-C-01");
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-C-02");
-    enfileEvenement(BLOCAGE, 10);
+    enfileEvenement(MOTEUR_BLOCAGE, 10);
     ft += assertEqualsInt((int) defileEvenement(), 0, "Q-C-03");
 
     return ft;

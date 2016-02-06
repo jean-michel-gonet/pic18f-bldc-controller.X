@@ -1,43 +1,68 @@
+#include <htc.h>
+
 #include "domaine.h"
+#include "tableauDeBord.h"
 #include "test.h"
+#include "file.h"
 #include "moteur.h"
 
+#define X 255
 #define OO X
-//                                Direction:              AVANT      //        ARRIERE
-//                                    Phase:        1  2  3  4  5  6 //     1  2  3  4  5  6
+//                                Direction:                AVANT      //        ARRIERE
+//                                    Phase:          1  2  3  4  5  6 //     1  2  3  4  5  6
 const unsigned char const pwmAParPhase[2][7] = { {OO, X, 1, 1, X, 0, 0}, {OO, X, 0, 0, X, 1, 1} };
 const unsigned char const pwmBParPhase[2][7] = { {OO, 0, 0, X, 1, 1, X}, {OO, 1, 1, X, 0, 0, X} };
 const unsigned char const pwmCParPhase[2][7] = { {OO, 1, X, 0, 0, X, 1}, {OO, 0, X, 1, 1, X, 0} };
 
 /**
- * Rend les valeurs PWM para rapport à la phase spécifiée, à la tension moyenne
+ * Contient les valeurs des rapports cycliques des trois
+ * modulations PWM.
+ */
+typedef struct {
+    /** Rapport cyclique pour le connecteur de la bobine A. */
+    unsigned char ccpa;
+    /** Rapport cyclique pour le connecteur de la bobine B. */
+    unsigned char ccpb;
+    /** Rapport cyclique pour le connecteur de la bobine C. */
+    unsigned char ccpc;
+} CCP;
+
+
+/**
+ * Configure les PWM par rapport à la phase spécifiée, à la tension moyenne
  * et à la direction de rotation.
  * @param tensionMoyenne Tension moyenne à utiliser. Il est conseillé de ne pas utiliser
  * une valeur trop forte ici, pour ne pas brûler le circuit.
- * @param phase Phase actuelle, entre 1 et 6.
- * @param direction AVANT ou ARRIERE.
- * @param ccp Structure pour les valeurs PWM.
  */
-void calculeAmplitudes(unsigned char tensionMoyenne,
-                       enum DIRECTION direction,
-                       unsigned char phase,
-                       struct CCP *ccp) {
+void calculeAmplitudes(MagnitudeEtDirection *tensionMoyenne, unsigned char phase) {
     unsigned char pwm;
-
+    Direction direction = tensionMoyenne->direction;
+    unsigned char magnitude = tensionMoyenne->magnitude;
+    CCP ccp;
+    
     if ( (phase == 0) || (phase > 6) ) {
-        ccp->ccpa = 0;
-        ccp->ccpb = 0;
-        ccp->ccpc = 0;
+        ccp.ccpa = 0;
+        ccp.ccpb = 0;
+        ccp.ccpc = 0;
     } else {
         pwm = pwmAParPhase[direction][phase];
-        ccp->ccpa = (pwm == 1 ? tensionMoyenne : pwm);
+        ccp.ccpa = (pwm == 1 ? magnitude : pwm);
 
         pwm = pwmBParPhase[direction][phase];
-        ccp->ccpb = (pwm == 1 ? tensionMoyenne : pwm);
+        ccp.ccpb = (pwm == 1 ? magnitude : pwm);
         
         pwm = pwmCParPhase[direction][phase];
-        ccp->ccpc = (pwm == 1 ? tensionMoyenne : pwm);
+        ccp.ccpc = (pwm == 1 ? magnitude : pwm);
     }
+    
+    CCPR1L = (ccp.ccpa == X ? 0 : ccp.ccpa);
+    PORTCbits.RC3 = (ccp.ccpa == 0 ? 1 : 0);
+
+    CCPR2L = (ccp.ccpb == X ? 0 : ccp.ccpb);
+    PORTCbits.RC0 = (ccp.ccpb == 0 ? 1 : 0);
+
+    CCPR3L = (ccp.ccpc == X ? 0 : ccp.ccpc);
+    PORTCbits.RC7 = (ccp.ccpc == 0 ? 1 : 0);
 }
 
 /*
@@ -50,8 +75,8 @@ const unsigned char const phaseParHall[] = {
 };
 
 /**
- * Determine la phase en cours d'aprés les senseurs hall.
- * @param hall La valeur des senseurs hall: 0b*****zyx
+ * Détermine la phase en cours d'après les senseurs hall.
+ * @param hall La valeur des senseurs hall: 0b*****ZYX
  * @return Le numéro de phase, entre 1 et 6.
  */
 unsigned char phaseSelonHall(unsigned char hall) {
@@ -66,56 +91,81 @@ unsigned char phaseSelonHall(unsigned char hall) {
 }
 
 /**
- * Calcule la phase en cours à partir de la lecture des senseurs hall.
- * Effectue également un contrôle de la lecture, pour vérifier si elle est
- * possible. Ceci sert à éviter de compter des rebondissements ou du bruit
- * qui affecte la lecture des senseurs.
- * @param hall La valeur des senseurs hall: 0b*****yzx
- * @param direction Direction actuelle.
- * @return La phase (de 1 à 6) ou un code d'erreur.
+ * Compare la phase spécifiée avec la phase précédente, et accumule le compte
+ * de phases dans {@code mesureDeVitesse}.
+ * @param phase La phase actuelle.
+ * @param mesureDeVitesse Pour accumuler le nombre de phases détectées.
  */
-unsigned char phaseSelonHallEtDirection(unsigned char hall, enum DIRECTION direction) {
-
-    static unsigned char phase0 = ERROR;
-    unsigned char phase;
+void mesureVitesse(unsigned char phase, MagnitudeEtDirection *mesureDeVitesse) {
+    static unsigned char phase0 = 0;
+    Direction direction;
     signed char step;
 
-    // Obtient la phase selon les senseurs hall:
-    phase = phaseSelonHall(hall);
-
-    // Vérifie que la nouvelle valeur est possible, compte tenu de la
-    // valeur précédente, et de la direction:
-    // (les senseurs hall peuvent avoir des rebondissements)
-    if (phase0 != ERROR) {
+    // Etablit la direction de rotation:
+    if (phase0 != 0) {
         step = phase0 - phase;
         switch(step) {
             case -1:
             case 5:
-                if (direction == ARRIERE) {
-                    return ERROR;
-                }
+                direction = AVANT;
                 break;
 
             case 1:
             case -5:
-                if (direction == AVANT) {
-                    return ERROR;
-                }
+                direction == ARRIERE;
                 break;
 
             case 0:
             default:
-                return ERROR;
+                return;
         }
     }
-
-    // Si on arrive ici, la lecture des Hall est consid�r�e possible,
-    // et on peut rendre la phase correspondante:
     phase0 = phase;
-    return phase;
+
+    // Compte le nombre de pas dans la mesure de vitesse:
+    if (direction == mesureDeVitesse->direction) {
+        mesureDeVitesse->magnitude++;
+    } else {
+        if (--mesureDeVitesse->magnitude == 0) {
+            mesureDeVitesse->direction = direction;
+        }
+    }
+}
+
+void MOTEUR_machine(EvenementEtValeur *ev) {
+    static MagnitudeEtDirection *tensionMoyenne;
+    static MagnitudeEtDirection mesureDeVitesse = {0, INDETERMINEE};
+    static unsigned char phase;
+
+    switch(ev->evenement) {
+
+        case MOTEUR_TENSION_MOYENNE:
+            tensionMoyenne = &tableauDeBord.tensionMoyenne;
+            calculeAmplitudes(tensionMoyenne, phase);
+            break;
+
+        case MOTEUR_PHASE:
+            phase = phaseSelonHall(ev->valeur);
+            calculeAmplitudes(tensionMoyenne, phase);
+            mesureVitesse(phase, &mesureDeVitesse);
+            break;
+
+        case BASE_DE_TEMPS:
+            tableauDeBord.vitesseMesuree.magnitude = mesureDeVitesse.magnitude;
+            tableauDeBord.vitesseMesuree.direction = mesureDeVitesse.direction;
+            mesureDeVitesse.magnitude = 0;
+            enfileMessageInterne(VITESSE_MESUREE);
+            break;
+    }
 }
 
 #ifdef TEST
+
+unsigned char test_machine() {
+    unsigned char testsEnErreur = 0;
+    
+    return testsEnErreur;
+}
 
 unsigned char test_phaseSelonHall() {
     unsigned char ft = 0;
@@ -135,102 +185,82 @@ unsigned char test_phaseSelonHall() {
 unsigned char test_calculeAmplitudesArret() {
     unsigned char ft = 0;
     unsigned char tension = 15;
-    struct CCP ccp;
+    CCP ccp;
+    MagnitudeEtDirection tensionMoyenne;
 
     // Phase inconnue:
-    calculeAmplitudes(tension, AVANT, 0, &ccp);
+    calculeAmplitudes(&tensionMoyenne, 0);
     ft += assertEqualsChar(ccp.ccpa, 0, "CAA-0A");
     ft += assertEqualsChar(ccp.ccpb, 0, "CAA-0B");
     ft += assertEqualsChar(ccp.ccpc, 0, "CAA-0C");
 
-    calculeAmplitudes(tension, AVANT, 7, &ccp);
+    calculeAmplitudes(&tensionMoyenne, 7);
     ft += assertEqualsChar(ccp.ccpa, 0, "CAA-0A");
     ft += assertEqualsChar(ccp.ccpb, 0, "CAA-0B");
     ft += assertEqualsChar(ccp.ccpc, 0, "CAA-0C");
 
     // Marche avant:
-    calculeAmplitudes(tension, AVANT, 1, &ccp);
+    calculeAmplitudes(&tensionMoyenne, 1);
     ft += assertEqualsChar(ccp.ccpa,         X, "CAV-1A");
     ft += assertEqualsChar(ccp.ccpb,         0, "CAV-1B");
     ft += assertEqualsChar(ccp.ccpc, tension, "CAV-1C");
 
-    calculeAmplitudes(tension, AVANT, 2, &ccp);
+    calculeAmplitudes(&tensionMoyenne, 2);
     ft += assertEqualsChar(ccp.ccpa, tension, "CAV-2A");
     ft += assertEqualsChar(ccp.ccpb,         0, "CAV-2B");
     ft += assertEqualsChar(ccp.ccpc,         X, "CAV-2C");
 
-    calculeAmplitudes(tension, AVANT, 3, &ccp);
+    calculeAmplitudes(&tensionMoyenne, 3);
     ft += assertEqualsChar(ccp.ccpa, tension, "CAV-3A");
     ft += assertEqualsChar(ccp.ccpb,         X, "CAV-3B");
     ft += assertEqualsChar(ccp.ccpc,         0, "CAV-3C");
 
-    calculeAmplitudes(tension, AVANT, 4, &ccp);
+    calculeAmplitudes(&tensionMoyenne, 4);
     ft += assertEqualsChar(ccp.ccpa,         X, "CAV-4A");
     ft += assertEqualsChar(ccp.ccpb, tension, "CAV-4B");
     ft += assertEqualsChar(ccp.ccpc,         0, "CAV-4C");
 
-    calculeAmplitudes(tension, AVANT, 5, &ccp);
+    calculeAmplitudes(&tensionMoyenne, 5);
     ft += assertEqualsChar(ccp.ccpa,         0, "CAV-5A");
     ft += assertEqualsChar(ccp.ccpb, tension, "CAV-5B");
     ft += assertEqualsChar(ccp.ccpc,         X, "CAV-5C");
 
-    calculeAmplitudes(tension, AVANT, 6, &ccp);
+    calculeAmplitudes(&tensionMoyenne, 6);
     ft += assertEqualsChar(ccp.ccpa,         0, "CAV-6A");
     ft += assertEqualsChar(ccp.ccpb,         X, "CAV-6B");
     ft += assertEqualsChar(ccp.ccpc, tension, "CAV-6C");
 
 
     // Marche arrière:
-    calculeAmplitudes(tension, ARRIERE, 1, &ccp);
+    calculeAmplitudes(&tensionMoyenne, 1);
     ft += assertEqualsChar(ccp.ccpa,         X, "CAR-1A");
     ft += assertEqualsChar(ccp.ccpb, tension, "CAR-1B");
     ft += assertEqualsChar(ccp.ccpc,         0, "CAR-1C");
 
-    calculeAmplitudes(tension, ARRIERE, 2, &ccp);
+    calculeAmplitudes(&tensionMoyenne, 2);
     ft += assertEqualsChar(ccp.ccpa,         0, "CAR-2A");
     ft += assertEqualsChar(ccp.ccpb, tension, "CAR-2B");
     ft += assertEqualsChar(ccp.ccpc,         X, "CAR-2C");
 
-    calculeAmplitudes(tension, ARRIERE, 3, &ccp);
+    calculeAmplitudes(&tensionMoyenne, 3);
     ft += assertEqualsChar(ccp.ccpa,         0, "CAR-3A");
     ft += assertEqualsChar(ccp.ccpb,         X, "CAR-3B");
     ft += assertEqualsChar(ccp.ccpc, tension, "CAR-3C");
 
-    calculeAmplitudes(tension, ARRIERE, 4, &ccp);
+    calculeAmplitudes(&tensionMoyenne, 4);
     ft += assertEqualsChar(ccp.ccpa,         X, "CAR-4A");
     ft += assertEqualsChar(ccp.ccpb,         0, "CAR-4B");
     ft += assertEqualsChar(ccp.ccpc, tension, "CAR-4C");
 
-    calculeAmplitudes(tension, ARRIERE, 5, &ccp);
+    calculeAmplitudes(&tensionMoyenne, 5);
     ft += assertEqualsChar(ccp.ccpa, tension, "CAR-5A");
     ft += assertEqualsChar(ccp.ccpb,         0, "CAR-5B");
     ft += assertEqualsChar(ccp.ccpc,         X, "CAR-5C");
 
-    calculeAmplitudes(tension, ARRIERE, 6, &ccp);
+    calculeAmplitudes(&tensionMoyenne, 6);
     ft += assertEqualsChar(ccp.ccpa, tension, "CAR-6A");
     ft += assertEqualsChar(ccp.ccpb,         X, "CAR-6B");
     ft += assertEqualsChar(ccp.ccpc,         0, "CAR-6C");
-
-    return ft;
-}
-
-unsigned char test_phaseSelonHallEtDirection() {
-    unsigned char ft = 0;
-
-    ft += assertEqualsChar(phaseSelonHallEtDirection(0b001, AVANT), 1, "PHD-10");
-    ft += assertEqualsChar(phaseSelonHallEtDirection(0b011, AVANT), 2, "PHD-20");
-    ft += assertEqualsChar(phaseSelonHallEtDirection(0b010, AVANT), 3, "PHD-30");
-    ft += assertEqualsChar(phaseSelonHallEtDirection(0b110, AVANT), 4, "PHD-40");
-    ft += assertEqualsChar(phaseSelonHallEtDirection(0b100, AVANT), 5, "PHD-50");
-    ft += assertEqualsChar(phaseSelonHallEtDirection(0b101, AVANT), 6, "PHD-60");
-    ft += assertEqualsChar(phaseSelonHallEtDirection(0b001, AVANT), 1, "PHD-11");
-
-    ft += assertEqualsChar(phaseSelonHallEtDirection(0b001, AVANT), ERROR, "PHD-E0");
-    ft += assertEqualsChar(phaseSelonHallEtDirection(0b011, AVANT), 2, "PHD-E1");
-    ft += assertEqualsChar(phaseSelonHallEtDirection(0b011, AVANT), ERROR, "PHD-E1");
-    ft += assertEqualsChar(phaseSelonHallEtDirection(0b001, AVANT), ERROR, "PHD-E3");
-    ft += assertEqualsChar(phaseSelonHallEtDirection(0b010, AVANT), 3, "PHD-E4");
-    ft += assertEqualsChar(phaseSelonHallEtDirection(0b011, ARRIERE), 2, "PHD-E1");
 
     return ft;
 }
@@ -244,7 +274,7 @@ unsigned char test_moteur() {
 
     ft += test_phaseSelonHall();
     ft += test_calculeAmplitudesArret();
-    ft += test_phaseSelonHallEtDirection();
+    ft += test_machine();
 
     return ft;
 }
