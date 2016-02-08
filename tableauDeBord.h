@@ -4,7 +4,7 @@
 #define __TABLEAU_DE_BORD_H
 
 /**
- * Le tableau de bord contient l'état interne du systeme.
+ * Le tableau de bord contient l'état interne du système.
  * Lorsqu'un module change une valeur du tableau de bord, il
  * doit émettre un message interne.
  */
@@ -42,5 +42,15 @@ void enfileMessageInterne(Evenement evenement);
  * @return L'identifiant du message interne.
  */
 EvenementEtValeur *defileMessageInterne();
+
+/**
+ * Réinitialise la file des messages internes.
+ * Utilisée pour les tests unitaires.
+ */
+void reinitialiseMessagesInternes();
+
+#ifdef TEST
+unsigned char test_tableauDeBord();
+#endif
 
 #endif

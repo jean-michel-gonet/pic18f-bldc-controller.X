@@ -4,13 +4,12 @@
 #define __PUISSANCE_H
 
 /**
- * Varie la puissance selon la vitesse demandée et la vitesse mesurée.
- * @param vitesseMesuree Dernière vitesse mesurée (vitesse réelle, vitesse actuelle).
- * @param vitesseDemandee Vitesse demandée.
- * @return Puissance à appliquer.
+ * Machine à états pour réguler la puissance (tension moyenne) appliquée
+ * au moteur.
+ * @param ev Événement à traiter.
  */
-MagnitudeEtDirection *calculeTensionMoyenne(MagnitudeEtDirection *vitesseMesuree, 
-                                            MagnitudeEtDirection *vitesseDemandee);
+void PUISSANCE_machine(EvenementEtValeur *ev);
+
 #ifdef TEST
 /**
  * Tests unitaires pour le calcul de puissance.

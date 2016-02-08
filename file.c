@@ -5,16 +5,16 @@
 /**
  * Espace mémoire pour la file.
  */
-struct EVENEMENT_ET_VALEUR file[8];
+static EvenementEtValeur file[8];
 
 /** Curseur d'entrée de la file. */
-unsigned char file_entree = 0;
+static unsigned char file_entree = 0;
 
 /** Curseur de sortie de la file. */
-unsigned char file_sortie = 0;
+static unsigned char file_sortie = 0;
 
 /** Si différent de zéro, alors la file a débordé. */
-unsigned char file_deborde = 0;
+static unsigned char file_deborde = 0;
 
 /**
  * Ajoute un événement à la file.

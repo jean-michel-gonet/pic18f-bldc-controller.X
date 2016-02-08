@@ -6,26 +6,41 @@
 #include "file.h"
 #include "moteur.h"
 
-#define X 255
-#define OO X
-//                                Direction:                AVANT      //        ARRIERE
-//                                    Phase:          1  2  3  4  5  6 //     1  2  3  4  5  6
-const unsigned char const pwmAParPhase[2][7] = { {OO, X, 1, 1, X, 0, 0}, {OO, X, 0, 0, X, 1, 1} };
-const unsigned char const pwmBParPhase[2][7] = { {OO, 0, 0, X, 1, 1, X}, {OO, 1, 1, X, 0, 0, X} };
-const unsigned char const pwmCParPhase[2][7] = { {OO, 1, X, 0, 0, X, 1}, {OO, 0, X, 1, 1, X, 0} };
-
-/**
- * Contient les valeurs des rapports cycliques des trois
- * modulations PWM.
- */
 typedef struct {
-    /** Rapport cyclique pour le connecteur de la bobine A. */
-    unsigned char ccpa;
-    /** Rapport cyclique pour le connecteur de la bobine B. */
-    unsigned char ccpb;
-    /** Rapport cyclique pour le connecteur de la bobine C. */
-    unsigned char ccpc;
-} CCP;
+    unsigned char H;
+    unsigned char L;
+} Bobine;
+
+typedef struct {
+    Bobine A;
+    Bobine B;
+    Bobine C;
+} Schema;
+
+typedef struct {
+    Schema avant;
+    Schema arriere;
+} Pwm;
+
+const Pwm const pwmParPhase[7] = {
+    {{{0, 0}, {0, 0}, {0, 0}}, {{0, 0}, {0, 0}, {0, 0}}},
+
+     //         AVANT        //        ARRIERE
+    //AH, AL, BH, BL, CH, CL // AH, AL, BH, BL, CH, CL
+    {{{0, 0}, {0, 1}, {1, 0}}, {{0, 0}, {1, 0}, {0, 1}}},
+    {{{1, 0}, {0, 1}, {0, 0}}, {{0, 1}, {1, 0}, {0, 0}}},
+    {{{1, 0}, {0, 0}, {0, 1}}, {{0, 1}, {0, 0}, {1, 0}}},
+    {{{0, 0}, {1, 0}, {0, 1}}, {{0, 0}, {0, 1}, {1, 0}}},
+    {{{0, 1}, {1, 0}, {0, 0}}, {{1, 0}, {0, 1}, {0, 0}}},
+    {{{0, 1}, {0, 0}, {1, 0}}, {{1, 0}, {0, 0}, {0, 1}}}
+};
+
+#define AH CCPR1L 
+#define AL PORTCbits.RC3
+#define BH CCPR2L
+#define BL PORTCbits.RC0
+#define CH CCPR3L
+#define CL PORTCbits.RC7
 
 
 /**
@@ -35,34 +50,40 @@ typedef struct {
  * une valeur trop forte ici, pour ne pas brûler le circuit.
  */
 void calculeAmplitudes(MagnitudeEtDirection *tensionMoyenne, unsigned char phase) {
-    unsigned char pwm;
-    Direction direction = tensionMoyenne->direction;
-    unsigned char magnitude = tensionMoyenne->magnitude;
-    CCP ccp;
+    Pwm pwm;
+    unsigned char magnitude;
     
     if ( (phase == 0) || (phase > 6) ) {
-        ccp.ccpa = 0;
-        ccp.ccpb = 0;
-        ccp.ccpc = 0;
+        AH = 0;
+        BH = 0;
+        CH = 0;
     } else {
-        pwm = pwmAParPhase[direction][phase];
-        ccp.ccpa = (pwm == 1 ? magnitude : pwm);
-
-        pwm = pwmBParPhase[direction][phase];
-        ccp.ccpb = (pwm == 1 ? magnitude : pwm);
-        
-        pwm = pwmCParPhase[direction][phase];
-        ccp.ccpc = (pwm == 1 ? magnitude : pwm);
+        pwm = pwmParPhase[phase];
+        magnitude = tensionMoyenne->magnitude;
+        switch (tensionMoyenne->direction) {
+            case AVANT:
+                AH = pwm.avant.A.H ? magnitude : 0;
+                AL = pwm.avant.A.L;
+                
+                BH = pwm.avant.B.H ? magnitude : 0;
+                BL = pwm.avant.B.L;
+                
+                CH = pwm.avant.C.H ? magnitude : 0;
+                CL = pwm.avant.C.L;
+                
+                break;
+            case ARRIERE:
+                AH = pwm.arriere.A.H ? magnitude : 0;
+                AL = pwm.arriere.A.L;
+                
+                BH = pwm.arriere.B.H ? magnitude : 0;
+                BL = pwm.arriere.B.L;
+                
+                CH = pwm.arriere.C.H ? magnitude : 0;
+                CL = pwm.arriere.C.L;
+                break;
+        }
     }
-    
-    CCPR1L = (ccp.ccpa == X ? 0 : ccp.ccpa);
-    PORTCbits.RC3 = (ccp.ccpa == 0 ? 1 : 0);
-
-    CCPR2L = (ccp.ccpb == X ? 0 : ccp.ccpb);
-    PORTCbits.RC0 = (ccp.ccpb == 0 ? 1 : 0);
-
-    CCPR3L = (ccp.ccpc == X ? 0 : ccp.ccpc);
-    PORTCbits.RC7 = (ccp.ccpc == 0 ? 1 : 0);
 }
 
 /*
@@ -90,6 +111,8 @@ unsigned char phaseSelonHall(unsigned char hall) {
     return phaseParHall[hall];
 }
 
+static unsigned char mesureDeVitessePhase0 = 0;
+
 /**
  * Compare la phase spécifiée avec la phase précédente, et accumule le compte
  * de phases dans {@code mesureDeVitesse}.
@@ -97,37 +120,41 @@ unsigned char phaseSelonHall(unsigned char hall) {
  * @param mesureDeVitesse Pour accumuler le nombre de phases détectées.
  */
 void mesureVitesse(unsigned char phase, MagnitudeEtDirection *mesureDeVitesse) {
-    static unsigned char phase0 = 0;
-    Direction direction;
+    Direction direction = INDETERMINEE;
     signed char step;
 
-    // Etablit la direction de rotation:
-    if (phase0 != 0) {
-        step = phase0 - phase;
+    // Établit la direction de rotation:
+    if (mesureDeVitessePhase0 != 0) {
+        step = mesureDeVitessePhase0 - phase;
         switch(step) {
             case -1:
+                direction = AVANT;
+                break;
             case 5:
                 direction = AVANT;
                 break;
 
             case 1:
-            case -5:
-                direction == ARRIERE;
+                direction = ARRIERE;
                 break;
-
-            case 0:
-            default:
-                return;
+            case -5:
+                direction = ARRIERE;
+                break;
         }
     }
-    phase0 = phase;
+    mesureDeVitessePhase0 = phase;
 
-    // Compte le nombre de pas dans la mesure de vitesse:
-    if (direction == mesureDeVitesse->direction) {
-        mesureDeVitesse->magnitude++;
-    } else {
-        if (--mesureDeVitesse->magnitude == 0) {
+    if (direction != INDETERMINEE) {
+        if (mesureDeVitesse->direction == INDETERMINEE) {
             mesureDeVitesse->direction = direction;
+        }
+
+        if (direction == mesureDeVitesse->direction) {
+            mesureDeVitesse->magnitude++;
+        } else {
+            if (--mesureDeVitesse->magnitude == 0) {
+                mesureDeVitesse->direction = direction;
+            }
         }
     }
 }
@@ -160,13 +187,7 @@ void MOTEUR_machine(EvenementEtValeur *ev) {
 }
 
 #ifdef TEST
-
-unsigned char test_machine() {
-    unsigned char testsEnErreur = 0;
-    
-    return testsEnErreur;
-}
-
+#define P 30
 unsigned char test_phaseSelonHall() {
     unsigned char ft = 0;
 
@@ -181,88 +202,212 @@ unsigned char test_phaseSelonHall() {
 
     return ft;
 }
-
-unsigned char test_calculeAmplitudesArret() {
-    unsigned char ft = 0;
-    unsigned char tension = 15;
-    CCP ccp;
-    MagnitudeEtDirection tensionMoyenne;
-
-    // Phase inconnue:
-    calculeAmplitudes(&tensionMoyenne, 0);
-    ft += assertEqualsChar(ccp.ccpa, 0, "CAA-0A");
-    ft += assertEqualsChar(ccp.ccpb, 0, "CAA-0B");
-    ft += assertEqualsChar(ccp.ccpc, 0, "CAA-0C");
-
-    calculeAmplitudes(&tensionMoyenne, 7);
-    ft += assertEqualsChar(ccp.ccpa, 0, "CAA-0A");
-    ft += assertEqualsChar(ccp.ccpb, 0, "CAA-0B");
-    ft += assertEqualsChar(ccp.ccpc, 0, "CAA-0C");
-
-    // Marche avant:
+unsigned char test_mesureVitesseMarcheAvant() {
+    unsigned char testsEnErreur = 0;
+    unsigned char tour, phase;
+    MagnitudeEtDirection mesureDeVitesse = {INDETERMINEE, 0};
+    
+    for (tour = 0; tour < 10; tour++) {
+        for (phase = 1; phase <= 6; phase++) {
+            mesureVitesse(phase, &mesureDeVitesse);
+        }
+    }
+    assertEqualsChar(mesureDeVitesse.direction, AVANT, "MOMV_01");
+    assertEqualsChar(mesureDeVitesse.magnitude, 59, "MOMV_02");
+    
+    return testsEnErreur;
+}
+unsigned char test_mesureVitesseMarcheArriere() {
+    unsigned char testsEnErreur = 0;
+    unsigned char tour, phase;
+    MagnitudeEtDirection mesureDeVitesse = {INDETERMINEE, 0};
+    
+    for (tour = 0; tour < 10; tour++) {
+        for (phase = 6; phase >0; phase--) {
+            mesureVitesse(phase, &mesureDeVitesse);
+        }
+    }
+    assertEqualsChar(mesureDeVitesse.direction, ARRIERE, "MOMV_11");
+    assertEqualsChar(mesureDeVitesse.magnitude, 59, "MOMV_12");
+    
+    return testsEnErreur;
+}
+unsigned char test_mesureVitesseInversionMarche() {
+    unsigned char testsEnErreur = 0;
+    
+    MagnitudeEtDirection mesureDeVitesse = {INDETERMINEE, 0};
+    mesureDeVitessePhase0 = 6;
+    
+    mesureVitesse(1, &mesureDeVitesse);
+    mesureVitesse(2, &mesureDeVitesse);
+    mesureVitesse(3, &mesureDeVitesse);
+    mesureVitesse(2, &mesureDeVitesse);
+    mesureVitesse(1, &mesureDeVitesse);
+    mesureVitesse(6, &mesureDeVitesse);
+    mesureVitesse(5, &mesureDeVitesse);
+    mesureVitesse(4, &mesureDeVitesse);
+    
+    assertEqualsChar(mesureDeVitesse.direction, ARRIERE, "MOMV_20a");
+    assertEqualsChar(mesureDeVitesse.magnitude, 2, "MOMV_20b");
+    
+    return testsEnErreur;
+}
+unsigned char test_calculeAmplitudesMarcheArriere() {
+    unsigned char testsEnErreur = 0;
+    MagnitudeEtDirection tensionMoyenne = {ARRIERE, P};
+    
     calculeAmplitudes(&tensionMoyenne, 1);
-    ft += assertEqualsChar(ccp.ccpa,         X, "CAV-1A");
-    ft += assertEqualsChar(ccp.ccpb,         0, "CAV-1B");
-    ft += assertEqualsChar(ccp.ccpc, tension, "CAV-1C");
+    testsEnErreur += assertEqualsChar(AH, 0, "PWMAR1AH");
+    testsEnErreur += assertEqualsChar(AL, 0, "PWMAR1AL");
+    testsEnErreur += assertEqualsChar(BH, P, "PWMAR1BH");
+    testsEnErreur += assertEqualsChar(BL, 0, "PWMAR1BL");
+    testsEnErreur += assertEqualsChar(CH, 0, "PWMAR1CH");
+    testsEnErreur += assertEqualsChar(CL, 1, "PWMAR1CL");
 
     calculeAmplitudes(&tensionMoyenne, 2);
-    ft += assertEqualsChar(ccp.ccpa, tension, "CAV-2A");
-    ft += assertEqualsChar(ccp.ccpb,         0, "CAV-2B");
-    ft += assertEqualsChar(ccp.ccpc,         X, "CAV-2C");
+    testsEnErreur += assertEqualsChar(AH, 0, "PWMAR2AH");
+    testsEnErreur += assertEqualsChar(AL, 1, "PWMAR2AL");
+    testsEnErreur += assertEqualsChar(BH, P, "PWMAR2BH");
+    testsEnErreur += assertEqualsChar(BL, 0, "PWMAR2BL");
+    testsEnErreur += assertEqualsChar(CH, 0, "PWMAR2CH");
+    testsEnErreur += assertEqualsChar(CL, 0, "PWMAR2CL");
 
     calculeAmplitudes(&tensionMoyenne, 3);
-    ft += assertEqualsChar(ccp.ccpa, tension, "CAV-3A");
-    ft += assertEqualsChar(ccp.ccpb,         X, "CAV-3B");
-    ft += assertEqualsChar(ccp.ccpc,         0, "CAV-3C");
+    testsEnErreur += assertEqualsChar(AH, 0, "PWMAR3AH");
+    testsEnErreur += assertEqualsChar(AL, 1, "PWMAR3AL");
+    testsEnErreur += assertEqualsChar(BH, 0, "PWMAR3BH");
+    testsEnErreur += assertEqualsChar(BL, 0, "PWMAR3BL");
+    testsEnErreur += assertEqualsChar(CH, P, "PWMAR3CH");
+    testsEnErreur += assertEqualsChar(CL, 0, "PWMAR3CL");
 
     calculeAmplitudes(&tensionMoyenne, 4);
-    ft += assertEqualsChar(ccp.ccpa,         X, "CAV-4A");
-    ft += assertEqualsChar(ccp.ccpb, tension, "CAV-4B");
-    ft += assertEqualsChar(ccp.ccpc,         0, "CAV-4C");
+    testsEnErreur += assertEqualsChar(AH, 0, "PWMAR4AH");
+    testsEnErreur += assertEqualsChar(AL, 0, "PWMAR4AL");
+    testsEnErreur += assertEqualsChar(BH, 0, "PWMAR4BH");
+    testsEnErreur += assertEqualsChar(BL, 1, "PWMAR4BL");
+    testsEnErreur += assertEqualsChar(CH, P, "PWMAR4CH");
+    testsEnErreur += assertEqualsChar(CL, 0, "PWMAR4CL");
 
     calculeAmplitudes(&tensionMoyenne, 5);
-    ft += assertEqualsChar(ccp.ccpa,         0, "CAV-5A");
-    ft += assertEqualsChar(ccp.ccpb, tension, "CAV-5B");
-    ft += assertEqualsChar(ccp.ccpc,         X, "CAV-5C");
+    testsEnErreur += assertEqualsChar(AH, P, "PWMAR5AH");
+    testsEnErreur += assertEqualsChar(AL, 0, "PWMAR5AL");
+    testsEnErreur += assertEqualsChar(BH, 0, "PWMAR5BH");
+    testsEnErreur += assertEqualsChar(BL, 1, "PWMAR5BL");
+    testsEnErreur += assertEqualsChar(CH, 0, "PWMAR5CH");
+    testsEnErreur += assertEqualsChar(CL, 0, "PWMAR5CL");
 
     calculeAmplitudes(&tensionMoyenne, 6);
-    ft += assertEqualsChar(ccp.ccpa,         0, "CAV-6A");
-    ft += assertEqualsChar(ccp.ccpb,         X, "CAV-6B");
-    ft += assertEqualsChar(ccp.ccpc, tension, "CAV-6C");
+    testsEnErreur += assertEqualsChar(AH, P, "PWMAR6AH");
+    testsEnErreur += assertEqualsChar(AL, 0, "PWMAR6AL");
+    testsEnErreur += assertEqualsChar(BH, 0, "PWMAR6BH");
+    testsEnErreur += assertEqualsChar(BL, 0, "PWMAR6BL");
+    testsEnErreur += assertEqualsChar(CH, 0, "PWMAR6CH");
+    testsEnErreur += assertEqualsChar(CL, 1, "PWMAR6CL");
 
-
-    // Marche arrière:
+    return testsEnErreur;
+}
+unsigned char test_calculeAmplitudesMarcheAvant() {
+    unsigned char testsEnErreur = 0;
+    MagnitudeEtDirection tensionMoyenne = {AVANT, P};
+        
     calculeAmplitudes(&tensionMoyenne, 1);
-    ft += assertEqualsChar(ccp.ccpa,         X, "CAR-1A");
-    ft += assertEqualsChar(ccp.ccpb, tension, "CAR-1B");
-    ft += assertEqualsChar(ccp.ccpc,         0, "CAR-1C");
+    testsEnErreur += assertEqualsChar(AH, 0, "PWMAV1AH");
+    testsEnErreur += assertEqualsChar(AL, 0, "PWMAV1AL");
+    testsEnErreur += assertEqualsChar(BH, 0, "PWMAV1BH");
+    testsEnErreur += assertEqualsChar(BL, 1, "PWMAV1BL");
+    testsEnErreur += assertEqualsChar(CH, P, "PWMAV1CH");
+    testsEnErreur += assertEqualsChar(CL, 0, "PWMAV1CL");
 
     calculeAmplitudes(&tensionMoyenne, 2);
-    ft += assertEqualsChar(ccp.ccpa,         0, "CAR-2A");
-    ft += assertEqualsChar(ccp.ccpb, tension, "CAR-2B");
-    ft += assertEqualsChar(ccp.ccpc,         X, "CAR-2C");
+    testsEnErreur += assertEqualsChar(AH, P, "PWMAV2AH");
+    testsEnErreur += assertEqualsChar(AL, 0, "PWMAV2AL");
+    testsEnErreur += assertEqualsChar(BH, 0, "PWMAV2BH");
+    testsEnErreur += assertEqualsChar(BL, 1, "PWMAV2BL");
+    testsEnErreur += assertEqualsChar(CH, 0, "PWMAV2CH");
+    testsEnErreur += assertEqualsChar(CL, 0, "PWMAV2CL");
 
     calculeAmplitudes(&tensionMoyenne, 3);
-    ft += assertEqualsChar(ccp.ccpa,         0, "CAR-3A");
-    ft += assertEqualsChar(ccp.ccpb,         X, "CAR-3B");
-    ft += assertEqualsChar(ccp.ccpc, tension, "CAR-3C");
+    testsEnErreur += assertEqualsChar(AH, P, "PWMAV3AH");
+    testsEnErreur += assertEqualsChar(AL, 0, "PWMAV3AL");
+    testsEnErreur += assertEqualsChar(BH, 0, "PWMAV3BH");
+    testsEnErreur += assertEqualsChar(BL, 0, "PWMAV3BL");
+    testsEnErreur += assertEqualsChar(CH, 0, "PWMAV3CH");
+    testsEnErreur += assertEqualsChar(CL, 1, "PWMAV3CL");
 
     calculeAmplitudes(&tensionMoyenne, 4);
-    ft += assertEqualsChar(ccp.ccpa,         X, "CAR-4A");
-    ft += assertEqualsChar(ccp.ccpb,         0, "CAR-4B");
-    ft += assertEqualsChar(ccp.ccpc, tension, "CAR-4C");
+    testsEnErreur += assertEqualsChar(AH, 0, "PWMAV4AH");
+    testsEnErreur += assertEqualsChar(AL, 0, "PWMAV4AL");
+    testsEnErreur += assertEqualsChar(BH, P, "PWMAV4BH");
+    testsEnErreur += assertEqualsChar(BL, 0, "PWMAV4BL");
+    testsEnErreur += assertEqualsChar(CH, 0, "PWMAV4CH");
+    testsEnErreur += assertEqualsChar(CL, 1, "PWMAV4CL");
 
     calculeAmplitudes(&tensionMoyenne, 5);
-    ft += assertEqualsChar(ccp.ccpa, tension, "CAR-5A");
-    ft += assertEqualsChar(ccp.ccpb,         0, "CAR-5B");
-    ft += assertEqualsChar(ccp.ccpc,         X, "CAR-5C");
+    testsEnErreur += assertEqualsChar(AH, 0, "PWMAV5AH");
+    testsEnErreur += assertEqualsChar(AL, 1, "PWMAV5AL");
+    testsEnErreur += assertEqualsChar(BH, P, "PWMAV5BH");
+    testsEnErreur += assertEqualsChar(BL, 0, "PWMAV5BL");
+    testsEnErreur += assertEqualsChar(CH, 0, "PWMAV5CH");
+    testsEnErreur += assertEqualsChar(CL, 0, "PWMAV5CL");
 
     calculeAmplitudes(&tensionMoyenne, 6);
-    ft += assertEqualsChar(ccp.ccpa, tension, "CAR-6A");
-    ft += assertEqualsChar(ccp.ccpb,         X, "CAR-6B");
-    ft += assertEqualsChar(ccp.ccpc,         0, "CAR-6C");
+    testsEnErreur += assertEqualsChar(AH, 0, "PWMAV6AH");
+    testsEnErreur += assertEqualsChar(AL, 1, "PWMAV6AL");
+    testsEnErreur += assertEqualsChar(BH, 0, "PWMAV6BH");
+    testsEnErreur += assertEqualsChar(BL, 0, "PWMAV6BL");
+    testsEnErreur += assertEqualsChar(CH, P, "PWMAV6CH");
+    testsEnErreur += assertEqualsChar(CL, 0, "PWMAV6CL");
 
-    return ft;
+    return testsEnErreur;
+}
+unsigned char test_moteurMesureVitesse() {
+    unsigned char testsEnErreur = 0;
+    EvenementEtValeur ev = {AUCUN_EVENEMENT, 0};
+    
+    ev.evenement = MOTEUR_PHASE;
+    
+    ev.valeur = phaseParHall[1];
+    MOTEUR_machine(&ev);
+    ev.valeur = phaseParHall[2];
+    MOTEUR_machine(&ev);
+    ev.valeur = phaseParHall[3];
+    MOTEUR_machine(&ev);
+    
+    ev.evenement = BASE_DE_TEMPS;
+    MOTEUR_machine(&ev);
+
+    testsEnErreur += assertEqualsChar(tableauDeBord.vitesseMesuree.direction, AVANT, "MOMEVE01");
+    testsEnErreur += assertEqualsChar(tableauDeBord.vitesseMesuree.magnitude, 2, "MOMEVE02");
+    testsEnErreur += assertEqualsChar(defileMessageInterne()->evenement, VITESSE_MESUREE, "MOMEVE03");
+    testsEnErreur += assertEqualsChar(defileMessageInterne()->evenement, 0, "MOMEVE04");
+            
+    return testsEnErreur;
+}
+unsigned char test_moteurTensionMoyenneEtChangementDePhase() {
+    unsigned char testsEnErreur = 0;
+
+    EvenementEtValeur ev = {AUCUN_EVENEMENT, 0};
+    
+    // Changement de tension moyenne:
+    ev.evenement = MOTEUR_TENSION_MOYENNE;
+    tableauDeBord.tensionMoyenne.direction = AVANT;
+    tableauDeBord.tensionMoyenne.magnitude = P;
+    MOTEUR_machine(&ev);
+
+    // Changement de phase:
+    ev.evenement = MOTEUR_PHASE;
+    ev.valeur = 1;
+    MOTEUR_machine(&ev);
+
+    // Vérifie l'état de la commutation:
+    testsEnErreur += assertEqualsChar(AH, 0, "MTMPAH");
+    testsEnErreur += assertEqualsChar(AL, 0, "MTMPAL");
+    testsEnErreur += assertEqualsChar(BH, 0, "MTMPBH");
+    testsEnErreur += assertEqualsChar(BL, 1, "MTMPBL");
+    testsEnErreur += assertEqualsChar(CH, P, "MTMPCH");
+    testsEnErreur += assertEqualsChar(CL, 0, "MTMPCL");
+    
+    return testsEnErreur;
 }
 
 /**
@@ -270,13 +415,19 @@ unsigned char test_calculeAmplitudesArret() {
  * @return Nombre de tests en erreur.
  */
 unsigned char test_moteur() {
-    unsigned char ft = 0;
+    unsigned char testsEnErreur = 0;
 
-    ft += test_phaseSelonHall();
-    ft += test_calculeAmplitudesArret();
-    ft += test_machine();
+    testsEnErreur += test_phaseSelonHall();
+    testsEnErreur += test_mesureVitesseMarcheAvant();
+    testsEnErreur += test_mesureVitesseMarcheArriere();
+    testsEnErreur += test_mesureVitesseInversionMarche();
+    testsEnErreur += test_calculeAmplitudesMarcheArriere();
+    testsEnErreur += test_calculeAmplitudesMarcheAvant();
+    
+    testsEnErreur += test_moteurMesureVitesse();
+    testsEnErreur += test_moteurTensionMoyenneEtChangementDePhase();
 
-    return ft;
+    return testsEnErreur;
 }
 
 #endif

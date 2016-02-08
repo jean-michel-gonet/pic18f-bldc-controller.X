@@ -11,13 +11,16 @@
  * Liste des événements du système.
  */
 typedef enum EVENEMENT {
-    /** L'intervale de temps qui sert de base de calcul s'est écoulé.*/
+    /** Pas d'événement. Ne pas utiliser.*/
+    AUCUN_EVENEMENT,
+            
+    /** L'intervalle de temps qui sert de base de calcul s'est écoulé.*/
     BASE_DE_TEMPS,
             
     /** Le moteur vient de changer de phase.*/
     MOTEUR_PHASE,
 
-    /** Le moteur est bloqué (il s'est ecoulé trop de temps depuis le dernier changement de phase). */
+    /** Le moteur est bloqué (il s'est écoulé trop de temps depuis le dernier changement de phase). */
     MOTEUR_BLOCAGE,
 
     /** La tension moyenne à appliquer au moteur à changé. */
@@ -56,12 +59,12 @@ typedef enum EVENEMENT {
 
 /** Pour indiquer le signe d'une magnitude absolue.*/
 typedef enum DIRECTION {
+    /** La direction n'est pas connue. */
+    INDETERMINEE,
     /** Marche avant. */
     AVANT,
     /** Marche arrière. */
     ARRIERE,
-    /** La direction n'est pas connue. */
-    INDETERMINEE,
     /** La magnitude est signée. */
     SIGNEE,
     /** La magnitude est positive. */
