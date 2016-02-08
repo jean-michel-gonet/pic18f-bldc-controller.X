@@ -92,13 +92,11 @@ void low_priority interrupt interruptionsBPTest() {
 
 /**
  * Point d'entrée.
- * Active les PWM 1 à 3, en mode 'Demi pont', pour produire un PWM
- * à 62Khz, avec une précision de 1024 pas.
+ * Active les PWM 1 à 3, en mode Demi-pont, pour produire un PWM
+ * à 62KHz, avec une précision de 1024 pas.
  */
 void main() {
     struct EVENEMENT_ET_VALEUR *ev;
-
-    struct CCP ccp;
 
     // Configure tous les ports comme entrées:
     TRISA = 0xFF;
@@ -106,8 +104,8 @@ void main() {
     TRISC = 0xFF;
 
     
-    // Configure le micro controleur pour 64MHz:
-    OSCCONbits.IRCF = 7;    // Frequence de base: 16 MHz
+    // Configure le micro contrôleur pour 64MHz:
+    OSCCONbits.IRCF = 7;    // Fréquence de base: 16 MHz
     OSCTUNEbits.PLLEN = 1;  // Active le PLL.
 
     // Configure le module A/D:
@@ -115,28 +113,28 @@ void main() {
     ANSELB = 0b00000100; // Active AN8 / RB2 comme entrée analogique.
     ANSELC = 0x00;       // Désactive les convertisseurs A/D.
 
-    ADCON2bits.ADFM = 0; // Resultat justifie sur ADRESH.
-    ADCON2bits.ACQT = 5; // Temps d'aquisition: 12 TAD
-    ADCON2bits.ADCS = 6; // TAD de 1uS pour Fosc = 64MHz
+    ADCON2bits.ADFM = 0; // Résultat justifié sur ADRESH.
+    ADCON2bits.ACQT = 5; // Temps d'acquisition: 12 TAD
+    ADCON2bits.ADCS = 6; // TAD de 1uS pour FOSC = 64MHz
 
     ADCON0bits.CHS = 8;  // Canal AN8 (RB2).
     ADCON0bits.ADON = 1; // Active le module A/D.
 
     // Active le temporisateur 1 (pour piloter les conversions A/D):
     T1CONbits.TMR1ON = 1;   // Active le temporisateur 1
-    T1CONbits.TMR1CS = 0;   // Source: Fosc / 4
-    T1CONbits.T1CKPS = 0;   // Pas de division de fr�quence.
+    T1CONbits.TMR1CS = 0;   // Source: FOSC / 4
+    T1CONbits.T1CKPS = 0;   // Pas de division de fréquence.
     T1CONbits.T1RD16 = 1;   // Temporisateur de 16 bits.
 
-    // Active le temporisateur 2 (pour g�rer les PWM):
+    // Active le temporisateur 2 (pour gérer les PWM):
     T2CONbits.TMR2ON = 1;
-    T2CONbits.T2CKPS = 1;   // Pas de division de fr�quence.
-    T2CONbits.T2OUTPS = 0;  // Pas de division de fr�quence.
-    PR2 = 255;              // P�riode max: 64MHz / (4 * 255) = 62kHz.
+    T2CONbits.T2CKPS = 1;   // Pas de division de fréquence.
+    T2CONbits.T2OUTPS = 0;  // Pas de division de fréquence.
+    PR2 = 255;              // Période max: 64MHz / (4 * 255) = 62kHz.
 
     // Active les CCP 1 à 3, tous sur le TMR2:
     CCP1CONbits.CCP1M = 12;         // Sorties P1A, P1B actives à niveau haut.
-    CCP1CONbits.P1M = 0;           // Contrôleur de demi pont (P1A et P1B).
+    CCP1CONbits.P1M = 0;            // Contrôleur de demi pont (P1A et P1B).
     PWM1CONbits.P1DC = TEMPS_MORT;  // Temps mort entre sorties complémentaires.
     CCPTMRS0bits.C1TSEL = 0;        // Utilise TMR2.
 
@@ -176,8 +174,11 @@ void main() {
     while(fileDeborde() == 0) {
         ev = defileEvenement();
         if (ev != 0) {
-            MOTEUR_machine(ev, &ccp);
-            etablit(&ccp);
+            do {
+                MOTEUR_machine(ev);
+                PUISSANCE_machine(ev);
+                ev = defileMessageInterne();
+            } while (ev != 0);
         }
     }
 
@@ -191,6 +192,7 @@ void main() {
 }
 
 #else
+
 /**
  * Point d'entrée pour les tests unitaires.
  */
