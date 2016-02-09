@@ -1,8 +1,8 @@
 /*
  * File:   pic18f-bldc-trp.c
- * Author: jmgonet
+ * Auteur: jmgonet
  *
- * Created on March 29, 2015, 10:21 AM
+ * Créé Mars 29, 2015, 10:21 AM
  */
 #include <htc.h>
 #include <stdio.h>
@@ -33,8 +33,7 @@
 
 #ifndef TEST
 
-#define TEMPS_BLOCAGE 3500
-#define TEMPS_MESURE_VITESSE 2656
+#define TEMPS_BASE_DE_TEMPS 2656
 
 /**
  * Routine de traitement d'interruptions de basse priorité.
@@ -43,19 +42,16 @@
 void low_priority interrupt interruptionsBPTest() {
     unsigned char hall;
     static unsigned char hall0 = 0;
-    static unsigned char vitesse = 0;
-    static unsigned int tempsDernierePhase = TEMPS_BLOCAGE;
-
-    static unsigned char nombreDePhases = 0;
-    static int tempsMesureVitesse = TEMPS_MESURE_VITESSE;
+    static int tempsMesureVitesse = TEMPS_BASE_DE_TEMPS;
+    unsigned char potentiometre;
 
     // Traitement des conversion AD:
     if (PIR1bits.TMR1IF) {
         PIR1bits.TMR1IF = 0;
 
         if (!ADCON0bits.GODONE) {
-            vitesse = ADRESH - 128;
-            enfileEvenement(VITESSE_DEMANDEE, vitesse);
+            potentiometre = ADRESH - 128;
+            enfileEvenement(LECTURE_POTENTIOMETRE, potentiometre);
             ADCON0bits.GODONE = 1;
         }
     }
@@ -64,29 +60,18 @@ void low_priority interrupt interruptionsBPTest() {
     if (PIR1bits.TMR2IF) {
         PIR1bits.TMR2IF = 0;
 
-        // Evenement vitesse mesuree:
+        // Événement base de temps:
         if (-- tempsMesureVitesse == 0) {
-            enfileEvenement(VITESSE_MESUREE, nombreDePhases);
-
-            tempsMesureVitesse = TEMPS_MESURE_VITESSE;
-            nombreDePhases = 0;
+            enfileEvenement(BASE_DE_TEMPS, 0);
+            tempsMesureVitesse = TEMPS_BASE_DE_TEMPS;
         }
 
-        // Evenement PHASE:
+        // Événement PHASE:
         hall = PORTA & 7;
         if (hall != hall0) {
-            tempsDernierePhase = TEMPS_BLOCAGE;
             enfileEvenement(MOTEUR_PHASE, hall);
             hall0 = hall;
-            nombreDePhases++;
         }
-
-        // Evenement BLOCAGE:
-        if (tempsDernierePhase-- == 0) {
-            tempsDernierePhase = TEMPS_BLOCAGE;
-            // enfileEvenement(BLOCAGE, 0);
-        }
-
     }
 }
 

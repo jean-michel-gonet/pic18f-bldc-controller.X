@@ -33,7 +33,7 @@ void corrigeTensionMoyenne(MagnitudeEtDirection *vitesseMesuree,
  * @return La vitesse demandée correspondante à la lecture.
  */
 void evalueVitesseDemandee(unsigned char lecture, 
-                                            MagnitudeEtDirection *vitesseDemandee) {
+                           MagnitudeEtDirection *vitesseDemandee) {
     signed char v = (signed char) lecture;
     
     if (v < 0) {
