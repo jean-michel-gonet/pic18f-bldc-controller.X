@@ -3,6 +3,19 @@
 #ifndef __TABLEAU_DE_BORD_H
 #define __TABLEAU_DE_BORD_H
 
+typedef union {
+    unsigned int valeur;
+    struct {
+        unsigned char basse;
+        unsigned char haute;
+    } partie;
+} Compteur;
+
+typedef struct {
+    Compteur tempsHaut;
+    Compteur tempsBas;
+} GenerateurPWMServo;
+
 /**
  * Le tableau de bord contient l'état interne du système.
  * Lorsqu'un module change une valeur du tableau de bord, il
@@ -16,15 +29,15 @@ typedef struct {
     MagnitudeEtDirection tensionMoyenne;
     
     /** Position du volant (CHANGEMENT_POSITION_ROUES_AVANT). */
-    unsigned char positionRouesAvant;
+    GenerateurPWMServo positionRouesAvant;
     
 } TableauDeBord;
 
 /** Le tableau de bord est une variable globale. */
 TableauDeBord tableauDeBord = {
-    {INDETERMINEE, 0}, // Vitesse mesurée.
-    {INDETERMINEE, 0}, // Tension moyenne à appliquer.
-    0                  // Position des roues avant.
+    {INDETERMINEE, 0},              // Vitesse mesurée.
+    {INDETERMINEE, 0},              // Tension moyenne à appliquer.
+    {65535 - 3000, 65535 - 37000}   // Position des roues avant.
 };
 
 /**

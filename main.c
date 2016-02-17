@@ -14,6 +14,7 @@
 #include "tableauDeBord.h"
 #include "puissance.h"
 #include "moteur.h"
+#include "direction.h"
 
 /**
  * Bits de configuration:
@@ -35,23 +36,54 @@
 
 #define TEMPS_BASE_DE_TEMPS 2656
 
+typedef enum {
+    TEMPS_HAUT,
+    TEMPS_BAS
+} EtatGenerateurPWMServo;
+
+/**
+ * Routine de traitement des interruptions de haute priorité.
+ * Utilisée pour produire le signal PWM destiné à diriger les roues avant
+ * de la voiture.
+ */
+void interrupt interruptionsHautePriorite() {
+    static EtatGenerateurPWMServo etat = TEMPS_BAS;
+    
+    if (PIR2bits.TMR3IF) {
+        PIR2bits.TMR3IF = 0;
+        switch (etat) {
+            case TEMPS_HAUT:
+                etat = TEMPS_BAS;
+                TMR3H = tableauDeBord.positionRouesAvant.tempsBas.partie.haute;
+                TMR3L = tableauDeBord.positionRouesAvant.tempsBas.partie.basse;
+                PORTAbits.RA6 = 0;
+                break;
+
+            case TEMPS_BAS:
+                etat = TEMPS_HAUT;
+                TMR3H = tableauDeBord.positionRouesAvant.tempsHaut.partie.haute;
+                TMR3L = tableauDeBord.positionRouesAvant.tempsHaut.partie.basse;
+                PORTAbits.RA6 = 1;
+                break;
+        }
+    }
+}
+
 /**
  * Routine de traitement d'interruptions de basse priorité.
  * Pilotage du moteur sur la base des détecteurs Hall.
  */
-void low_priority interrupt interruptionsBPTest() {
+void low_priority interrupt interruptionsBassePriorite() {
     unsigned char hall;
     static unsigned char hall0 = 0;
     static int tempsMesureVitesse = TEMPS_BASE_DE_TEMPS;
-    unsigned char potentiometre;
 
     // Traitement des conversion AD:
     if (PIR1bits.TMR1IF) {
         PIR1bits.TMR1IF = 0;
 
         if (!ADCON0bits.GODONE) {
-            potentiometre = ADRESH - 128;
-            enfileEvenement(LECTURE_POTENTIOMETRE, potentiometre);
+            enfileEvenement(LECTURE_POTENTIOMETRE, ADRESH);
             ADCON0bits.GODONE = 1;
         }
     }
@@ -106,11 +138,17 @@ void main() {
     ADCON0bits.ADON = 1; // Active le module A/D.
 
     // Active le temporisateur 1 (pour piloter les conversions A/D):
-    T1CONbits.TMR1ON = 1;   // Active le temporisateur 1
     T1CONbits.TMR1CS = 0;   // Source: FOSC / 4
     T1CONbits.T1CKPS = 0;   // Pas de division de fréquence.
     T1CONbits.T1RD16 = 1;   // Temporisateur de 16 bits.
+    T1CONbits.TMR1ON = 1;   // Active le temporisateur 1
 
+    // Active le temporisateur 3 (pour piloter le signal PWM destiné au servo de direction)
+    T3CONbits.TMR3CS = 0;   // Source: FOSC / 4
+    T3CONbits.TMR3ON = 1;   // Active le temporisateur 1
+    T3CONbits.T3RD16 = 1;   // Temporisateur de 16 bits.
+    T3CONbits.T3CKPS = 3;   // Diviseur de fréquence 1:8
+    
     // Active le temporisateur 2 (pour gérer les PWM):
     T2CONbits.TMR2ON = 1;
     T2CONbits.T2CKPS = 1;   // Pas de division de fréquence.
@@ -146,13 +184,17 @@ void main() {
     PIE1bits.TMR2IE = 1;    // Active les interruptions.
     IPR1bits.TMR2IP = 0;    // Interruptions de basse priorité.
 
+    // Active les interruptions du temporisateur 3:
+    PIE2bits.TMR3IE = 1;    // Active les interruptions.
+    IPR2bits.TMR3IP = 1;    // Interruptions de haute priorité.
+
     // Configure les ports IO:
     PORTA = 0;
     PORTB = 0;
     PORTC = 0;
-    TRISA = 0xFF;       // Tous les bits du port A comme entrées.
-    TRISB = 0b0011110;  // Entrées analogiques du port B.
-    TRISC = 0x00;       // Tous les bits du port C comme sorties.
+    TRISA = 0b10111111;  // RA6 est une sortie.
+    TRISB = 0b00011111;  // Entrées analogiques du port B.
+    TRISC = 0x00;        // Tous les bits du port C comme sorties.
 
     // Surveille la file d'événements, et les traite au fur
     // et à mesure:
@@ -162,6 +204,7 @@ void main() {
             do {
                 MOTEUR_machine(ev);
                 PUISSANCE_machine(ev);
+                DIRECTION_machine(ev);
                 ev = defileMessageInterne();
             } while (ev != 0);
         }
@@ -202,6 +245,7 @@ void main() {
     ft += test_file();
     ft += test_puissance();
     ft += test_moteur();
+    ft += test_direction();
 
     // Affiche le résultat des tests:
     printf("%u tests en erreur\r\n",ft);
