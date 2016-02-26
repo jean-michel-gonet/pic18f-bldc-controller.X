@@ -16,7 +16,7 @@ void calculePwmServoRouesAvant(unsigned char position) {
  */
 void DIRECTION_machine(EvenementEtValeur *ev) {
     unsigned int x;
-    if (ev->evenement == LECTURE_POTENTIOMETRE) {
+    if (ev->evenement == LECTURE_RC_GAUCHE_DROITE) {
         calculePwmServoRouesAvant(ev->valeur);
     }
 }
@@ -26,35 +26,27 @@ unsigned test_calculePwmServoRouesAvant() {
     unsigned char testsEnErreur = 0;
     
     calculePwmServoRouesAvant(128);
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 3024, "DIR01");
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 40000 - 3024, "DIR01");
+    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 3024, "DIR01");
+    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 3024, "DIR01");
 
     calculePwmServoRouesAvant(0);
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 2000, "DIR11");
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 40000 - 2000, "DIR11");
+    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 2000, "DIR11");
+    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 2000, "DIR11");
 
     calculePwmServoRouesAvant(255);
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 4040, "DIR21");
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 40000 - 4040, "DIR21");
-
-    calculePwmServoRouesAvant(160);
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 2000 + 160 * 8, "DIR31");
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 38000 - 160 * 8, "DIR31");
-
-    calculePwmServoRouesAvant(100);
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 2000 + 100 * 8, "DIR41");
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 38000 - 100 * 8, "DIR41");
+    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 4040, "DIR21");
+    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 4040, "DIR21");
 
     return testsEnErreur;
 }
 
 unsigned test_directionMachine() {
     unsigned char testsEnErreur = 0;
-    EvenementEtValeur ev = {LECTURE_POTENTIOMETRE, 0};
+    EvenementEtValeur ev = {LECTURE_RC_GAUCHE_DROITE, 0};
 
     DIRECTION_machine(&ev);
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 2000, "DIRM11");
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 40000 - 2000, "DIRM11");
+    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 2000, "DIRM11");
+    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 2000, "DIRM11");
 
     return testsEnErreur;
 }

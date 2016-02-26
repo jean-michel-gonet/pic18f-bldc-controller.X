@@ -34,13 +34,23 @@ void corrigeTensionMoyenne(MagnitudeEtDirection *vitesseMesuree,
  */
 void evalueVitesseDemandee(unsigned char lecture, 
                            MagnitudeEtDirection *vitesseDemandee) {
-    signed char v = (signed char) lecture;
+    signed char v = (signed char) (lecture - 128);
     
     if (v < 0) {
         vitesseDemandee->direction = ARRIERE;
-        vitesseDemandee->magnitude = -v;
+        if (v == -128) {
+            vitesseDemandee->magnitude = 255;
+            return;
+        } else {
+            vitesseDemandee->magnitude = -v;
+        }
+        
     } else {
         vitesseDemandee->direction = AVANT;
+        if (v == 127) {
+            vitesseDemandee->magnitude = 255;
+            return;
+        }
         vitesseDemandee->magnitude = v;
     }
     
@@ -72,7 +82,7 @@ void PUISSANCE_machine(EvenementEtValeur *ev) {
             enfileMessageInterne(MOTEUR_TENSION_MOYENNE);
             break;
 
-        case LECTURE_POTENTIOMETRE:
+        case LECTURE_RC_AVANT_ARRIERE:
             evalueVitesseDemandee(ev->valeur, &vitesseDemandee);
             break;
     }
@@ -83,13 +93,21 @@ unsigned test_evalueVitesseDemandee() {
     unsigned char testsEnErreur = 0;
     MagnitudeEtDirection vitesseDemandee;
     
-    evalueVitesseDemandee(30, &vitesseDemandee);
+    evalueVitesseDemandee(128 + 30, &vitesseDemandee);
     testsEnErreur += assertEqualsChar(vitesseDemandee.direction, AVANT, "PEV01");
     testsEnErreur += assertEqualsChar(vitesseDemandee.magnitude, 60, "PEV02");
 
-    evalueVitesseDemandee(-30, &vitesseDemandee);
+    evalueVitesseDemandee(128 - 30, &vitesseDemandee);
     testsEnErreur += assertEqualsChar(vitesseDemandee.direction, ARRIERE, "PEV11");
     testsEnErreur += assertEqualsChar(vitesseDemandee.magnitude, 60, "PEV12");
+
+    evalueVitesseDemandee(0, &vitesseDemandee);
+    testsEnErreur += assertEqualsChar(vitesseDemandee.direction, ARRIERE, "PEV21");
+    testsEnErreur += assertEqualsChar(vitesseDemandee.magnitude, 255, "PEV22");
+
+    evalueVitesseDemandee(255, &vitesseDemandee);
+    testsEnErreur += assertEqualsChar(vitesseDemandee.direction, AVANT, "PEV21");
+    testsEnErreur += assertEqualsChar(vitesseDemandee.magnitude, 255, "PEV22");
 
     return testsEnErreur;
 }
@@ -129,9 +147,9 @@ unsigned char test_calculeVitesseDemandeeSurLecturePotentiometre() {
     tableauDeBord.tensionMoyenne.direction = INDETERMINEE;
     tableauDeBord.tensionMoyenne.magnitude = 0;
     
-    evenementEtValeur.valeur = 30;
+    evenementEtValeur.valeur = 128 + 30;
 
-    evenementEtValeur.evenement = LECTURE_POTENTIOMETRE;
+    evenementEtValeur.evenement = LECTURE_RC_AVANT_ARRIERE;
     PUISSANCE_machine(&evenementEtValeur);    
     testsEnErreur += assertEqualsInt((int) defileMessageInterne(), 0, "PLP01");
     testsEnErreur += assertEqualsChar(tableauDeBord.tensionMoyenne.direction, INDETERMINEE, "PLP02");
@@ -139,9 +157,9 @@ unsigned char test_calculeVitesseDemandeeSurLecturePotentiometre() {
     
     evenementEtValeur.evenement = VITESSE_MESUREE;
     PUISSANCE_machine(&evenementEtValeur);    
-    testsEnErreur += assertEqualsChar(defileMessageInterne()->evenement, MOTEUR_TENSION_MOYENNE, "PLP01");
-    testsEnErreur += assertEqualsChar(tableauDeBord.tensionMoyenne.direction, AVANT, "PLP02");
-    testsEnErreur += assertEqualsChar(tableauDeBord.tensionMoyenne.magnitude, 60, "PLP03");
+    testsEnErreur += assertEqualsChar(defileMessageInterne()->evenement, MOTEUR_TENSION_MOYENNE, "PLP11");
+    testsEnErreur += assertEqualsChar(tableauDeBord.tensionMoyenne.direction, AVANT, "PLP12");
+    testsEnErreur += assertEqualsChar(tableauDeBord.tensionMoyenne.magnitude, 60, "PLP13");
     
     return testsEnErreur;
 }

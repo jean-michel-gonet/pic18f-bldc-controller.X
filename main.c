@@ -49,20 +49,20 @@ typedef enum {
 void interrupt interruptionsHautePriorite() {
     static EtatGenerateurPWMServo etat = TEMPS_BAS;
     
-    if (PIR2bits.TMR3IF) {
-        PIR2bits.TMR3IF = 0;
+    if (INTCONbits.TMR0IF) {
+        INTCONbits.TMR0IF = 0;
         switch (etat) {
             case TEMPS_HAUT:
                 etat = TEMPS_BAS;
-                TMR3H = tableauDeBord.positionRouesAvant.tempsBas.partie.haute;
-                TMR3L = tableauDeBord.positionRouesAvant.tempsBas.partie.basse;
+                TMR0H = tableauDeBord.positionRouesAvant.tempsBas.partie.haute;
+                TMR0L = tableauDeBord.positionRouesAvant.tempsBas.partie.basse;
                 PORTAbits.RA6 = 0;
                 break;
 
             case TEMPS_BAS:
                 etat = TEMPS_HAUT;
-                TMR3H = tableauDeBord.positionRouesAvant.tempsHaut.partie.haute;
-                TMR3L = tableauDeBord.positionRouesAvant.tempsHaut.partie.basse;
+                TMR0H = tableauDeBord.positionRouesAvant.tempsHaut.partie.haute;
+                TMR0L = tableauDeBord.positionRouesAvant.tempsHaut.partie.basse;
                 PORTAbits.RA6 = 1;
                 break;
         }
@@ -77,14 +77,53 @@ void low_priority interrupt interruptionsBassePriorite() {
     unsigned char hall;
     static unsigned char hall0 = 0;
     static int tempsMesureVitesse = TEMPS_BASE_DE_TEMPS;
+    static unsigned int instantCapture4, instantCapture5;
 
-    // Traitement des conversion AD:
-    if (PIR1bits.TMR1IF) {
-        PIR1bits.TMR1IF = 0;
+    // Traitement des conversions AD:
+    if (PIR5bits.TMR4IF) {
+        PIR5bits.TMR4IF = 0;
 
         if (!ADCON0bits.GODONE) {
             enfileEvenement(LECTURE_POTENTIOMETRE, ADRESH);
             ADCON0bits.GODONE = 1;
+        }
+    }
+
+    // Capture de l'entrée CCP4:
+    if (PIR4bits.CCP4IF) {
+        PIR4bits.CCP4IF = 0;
+        if (PORTBbits.RB0) {
+            CCP4CONbits.CCP4M = 4;          // Capture du flanc descendant.
+            instantCapture4 = CCPR4;
+        } else {
+            CCP4CONbits.CCP4M = 5;          // Capture du flanc montant.
+
+            instantCapture4 = CCPR4 - instantCapture4;
+            instantCapture4 -= 2000;
+            instantCapture4 >>= 3;
+            enfileEvenement(LECTURE_RC_GAUCHE_DROITE, (unsigned char) instantCapture4);
+        }
+    }
+
+    // Capture de l'entrée CCP5:
+    if (PIR4bits.CCP5IF) {
+        PIR4bits.CCP5IF = 0;
+        if (PORTAbits.RA4) {
+            CCP5CONbits.CCP5M = 4;          // Capture du flanc descendant.
+            instantCapture5 = CCPR5;
+        } else {
+            CCP5CONbits.CCP5M = 5;          // Capture du flanc montant.
+
+            instantCapture5 = CCPR5 - instantCapture5;
+            if (instantCapture5 > 4000) {
+                instantCapture5 = 4000;
+            }
+            if (instantCapture5 < 2000) {
+                instantCapture5 = 2000;
+            }
+            instantCapture5 -= 2000;
+            instantCapture5 >>= 3;
+            enfileEvenement(LECTURE_RC_AVANT_ARRIERE, (unsigned char) instantCapture5);
         }
     }
 
@@ -137,25 +176,40 @@ void main() {
     ADCON0bits.CHS = 8;  // Canal AN8 (RB2).
     ADCON0bits.ADON = 1; // Active le module A/D.
 
-    // Active le temporisateur 1 (pour piloter les conversions A/D):
-    T1CONbits.TMR1CS = 0;   // Source: FOSC / 4
-    T1CONbits.T1CKPS = 0;   // Pas de division de fréquence.
-    T1CONbits.T1RD16 = 1;   // Temporisateur de 16 bits.
-    T1CONbits.TMR1ON = 1;   // Active le temporisateur 1
-
-    // Active le temporisateur 3 (pour piloter le signal PWM destiné au servo de direction)
-    T3CONbits.TMR3CS = 0;   // Source: FOSC / 4
-    T3CONbits.TMR3ON = 1;   // Active le temporisateur 1
-    T3CONbits.T3RD16 = 1;   // Temporisateur de 16 bits.
-    T3CONbits.T3CKPS = 3;   // Diviseur de fréquence 1:8
+    // Temporisateur 0: PWM pour le servo de direction.
+    T0CONbits.T08BIT = 0;       // Compteur de 16 bits.
+    T0CONbits.T0CS = 0;         // Source: FOSC / 4
+    T0CONbits.PSA = 0;          // Active le diviseur de fréquence.
+    T0CONbits.T0PS = 2;         // Diviseur de fréquence TPS = 8
+    T0CONbits.TMR0ON = 1;       // Active le temporisateur
     
-    // Active le temporisateur 2 (pour gérer les PWM):
-    T2CONbits.TMR2ON = 1;
-    T2CONbits.T2CKPS = 1;   // Pas de division de fréquence.
-    T2CONbits.T2OUTPS = 0;  // Pas de division de fréquence.
-    PR2 = 255;              // Période max: 64MHz / (4 * 255) = 62kHz.
+    INTCONbits.TMR0IE = 1;      // Active les interruptions.
+    INTCON2bits.TMR0IP = 1;     // Interruptions de haute priorité.
 
-    // Active les CCP 1 à 3, tous sur le TMR2:
+    // Temporisateur 1: Capture CCP4 et CCP5 (2ms ==> 4000)
+    T1CONbits.TMR1CS = 0;       // Source: FOSC / 4
+    T1CONbits.T1CKPS = 3;       // Diviseur de fréquence TPS = 8
+    T1CONbits.T1RD16 = 1;       // Temporisateur de 16 bits.
+    T1CONbits.TMR1ON = 1;       // Active le temporisateur 1
+
+    // Temporisateur 2: PWM pour le moteur.
+    T2CONbits.T2CKPS = 1;       // Pas de division de fréquence.
+    T2CONbits.T2OUTPS = 0;      // Pas de division de fréquence.
+    T2CONbits.TMR2ON = 1;       // Active le temporisateur.
+    PR2 = 255;                  // Période max: 64MHz / (4 * 255) = 62kHz.
+    
+    PIE1bits.TMR2IE = 1;        // Active les interruptions.
+    IPR1bits.TMR2IP = 0;        // Interruptions de basse priorité.
+
+    // Temporisateur 4: Cadence des conversions A/D:
+    T4CONbits.T4CKPS = 1;       // Pas de division de fréquence.
+    T4CONbits.T4OUTPS = 0;      // Pas de division de fréquence.
+    T4CONbits.TMR4ON = 1;       // Active le temporisateur
+
+    PIE5bits.TMR4IE = 1;        // Active les interruptions.
+    IPR5bits.TMR4IP = 0;        // Interruptions de basse priorité.
+    
+    // Active les CCP 1 à 3 en mode PWM, tous sur le TMR2:
     CCP1CONbits.CCP1M = 12;         // Sorties P1A, P1B actives à niveau haut.
     CCP1CONbits.P1M = 0;            // Contrôleur de demi pont (P1A et P1B).
     PWM1CONbits.P1DC = TEMPS_MORT;  // Temps mort entre sorties complémentaires.
@@ -171,22 +225,21 @@ void main() {
     PWM3CONbits.P3DC = TEMPS_MORT;  // Temps mort entre sorties complémentaires.
     CCPTMRS0bits.C3TSEL = 0;        // Utilise TMR2.
 
+    // Active les CCP4 et CCP5 en mode capture, tous sur le TMR 1:
+    CCP4CONbits.CCP4M = 5;          // Capture du flanc montant.
+    CCPTMRS1bits.C4TSEL = 0;        // Utilise TMR1
+    PIE4bits.CCP4IE = 1;            // Active les interruptions.
+    IPR4bits.CCP4IP = 0;            // Basse priorité.
+    
+    CCP5CONbits.CCP5M = 5;          // Capture du flanc montant.
+    CCPTMRS1bits.C5TSEL = 0;        // Utilise TMR1
+    PIE4bits.CCP5IE = 1;            // Active les interruptions.
+    IPR4bits.CCP5IP = 0;            // Basse priorité.
+    
     // Active les interruptions en général:
     RCONbits.IPEN = 1;
     INTCONbits.GIEH = 1;
     INTCONbits.GIEL = 1;
-
-    // Active les interruptions du temporisateur 1:
-    PIE1bits.TMR1IE = 1;    // Active les interruptions.
-    IPR1bits.TMR1IP = 0;    // Interruptions de basse priorité.
-    
-    // Active les interruptions du temporisateur 2:
-    PIE1bits.TMR2IE = 1;    // Active les interruptions.
-    IPR1bits.TMR2IP = 0;    // Interruptions de basse priorité.
-
-    // Active les interruptions du temporisateur 3:
-    PIE2bits.TMR3IE = 1;    // Active les interruptions.
-    IPR2bits.TMR3IP = 1;    // Interruptions de haute priorité.
 
     // Configure les ports IO:
     PORTA = 0;
