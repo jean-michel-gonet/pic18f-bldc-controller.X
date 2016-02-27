@@ -4,7 +4,7 @@
  *
  * Créé Mars 29, 2015, 10:21 AM
  */
-#include <htc.h>
+#include <xc.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -78,13 +78,26 @@ void low_priority interrupt interruptionsBassePriorite() {
     static unsigned char hall0 = 0;
     static int tempsMesureVitesse = TEMPS_BASE_DE_TEMPS;
     static unsigned int instantCapture4, instantCapture5;
+    static int mesureAdc = 0;
 
     // Traitement des conversions AD:
     if (PIR5bits.TMR4IF) {
         PIR5bits.TMR4IF = 0;
 
         if (!ADCON0bits.GODONE) {
-            enfileEvenement(LECTURE_POTENTIOMETRE, ADRESH);
+            switch (ADCON0bits.CHS) {
+                case 8:
+                    enfileEvenement(LECTURE_POTENTIOMETRE, ADRESH);
+                    ADCON0bits.CHS = 13;
+                    break;
+                case 13:
+                    enfileEvenement(LECTURE_ALIMENTATION, ADRESH);
+                    ADCON0bits.CHS = 8;
+                    break;
+                default:
+                    ADCON0bits.CHS = 8;
+                    break;
+            }
             ADCON0bits.GODONE = 1;
         }
     }
@@ -166,7 +179,7 @@ void main() {
 
     // Configure le module A/D:
     ANSELA = 0x00;       // Désactive les convertisseurs A/D
-    ANSELB = 0b00000100; // Active AN8 / RB2 comme entrée analogique.
+    ANSELB = 0b00100100; // Active AN8(RB2) et AN13(RB5) comme entrées analogiques.
     ANSELC = 0x00;       // Désactive les convertisseurs A/D.
 
     ADCON2bits.ADFM = 0; // Résultat justifié sur ADRESH.
@@ -246,7 +259,7 @@ void main() {
     PORTB = 0;
     PORTC = 0;
     TRISA = 0b10111111;  // RA6 est une sortie.
-    TRISB = 0b00011111;  // Entrées analogiques du port B.
+    TRISB = 0b00111111;  // Entrées analogiques du port B.
     TRISC = 0x00;        // Tous les bits du port C comme sorties.
 
     // Surveille la file d'événements, et les traite au fur

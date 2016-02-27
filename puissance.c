@@ -4,6 +4,15 @@
 
 #define TENSION_MOYENNE_MIN 10
 #define TENSION_MOYENNE_MAX 180
+#define TENSION_MOYENNE_MAX_REDUITE 40
+#define TENSION_ALIMENTATION_MIN 7.4
+#define LECTURE_ALIMENTATION_MIN 255 * (TENSION_ALIMENTATION_MIN / 2) / 5
+
+/** 
+ * La tension moyenne maximum peut varier si la tension d'alimentation
+ * tombe en dessous d'un certain seuil.
+ */
+static char tensionMoyenneMax = TENSION_MOYENNE_MAX;
 
 /**
  * Corrige la tension moyenne du {@link TableauDeBord} selon différence observée entre
@@ -13,17 +22,19 @@
  */
 void corrigeTensionMoyenne(MagnitudeEtDirection *vitesseMesuree, 
                            MagnitudeEtDirection *vitesseDemandee) {
+    unsigned char magnitude = vitesseDemandee->magnitude;
     tableauDeBord.tensionMoyenne.direction = vitesseDemandee->direction;
     
-    if (vitesseDemandee->magnitude > TENSION_MOYENNE_MAX) {
-        vitesseDemandee->magnitude = TENSION_MOYENNE_MAX;
+    
+    if (magnitude > tensionMoyenneMax) {
+        magnitude = tensionMoyenneMax;
     }
     
-    if (vitesseDemandee->magnitude < TENSION_MOYENNE_MIN) {
-        vitesseDemandee->magnitude = 0;
+    if (magnitude < TENSION_MOYENNE_MIN) {
+        magnitude = 0;
     }
     
-    tableauDeBord.tensionMoyenne.magnitude = vitesseDemandee->magnitude;
+    tableauDeBord.tensionMoyenne.magnitude = magnitude;
 }
 
 /**
@@ -76,6 +87,13 @@ void PUISSANCE_machine(EvenementEtValeur *ev) {
     static MagnitudeEtDirection vitesseDemandee = {INDETERMINEE, 0};
     
     switch(ev->evenement) {
+        case LECTURE_ALIMENTATION:
+            if (ev->valeur < LECTURE_ALIMENTATION_MIN) {
+                tensionMoyenneMax = TENSION_MOYENNE_MAX_REDUITE;
+            } else {
+                tensionMoyenneMax = TENSION_MOYENNE_MAX;
+            }
+            break;
         case VITESSE_MESUREE:
             vitesseMesuree = &(tableauDeBord.vitesseMesuree);
             corrigeTensionMoyenne(vitesseMesuree, &vitesseDemandee);
@@ -111,7 +129,36 @@ unsigned test_evalueVitesseDemandee() {
 
     return testsEnErreur;
 }
+unsigned char test_limiteTensionMoyenneMax() {
+    unsigned char testsEnErreur = 0;
+    EvenementEtValeur evenementEtValeur;
 
+    reinitialiseMessagesInternes();
+    tableauDeBord.tensionMoyenne.direction = INDETERMINEE;
+    tableauDeBord.tensionMoyenne.magnitude = 0;
+
+    evenementEtValeur.evenement = LECTURE_RC_AVANT_ARRIERE;
+    evenementEtValeur.valeur = 128 + 30;
+    PUISSANCE_machine(&evenementEtValeur);    
+    
+    evenementEtValeur.valeur = 8;
+    evenementEtValeur.evenement = LECTURE_ALIMENTATION;
+    PUISSANCE_machine(&evenementEtValeur);    
+    
+    evenementEtValeur.evenement = VITESSE_MESUREE;
+    PUISSANCE_machine(&evenementEtValeur);    
+    testsEnErreur += assertEqualsChar(tableauDeBord.tensionMoyenne.magnitude, TENSION_MOYENNE_MAX_REDUITE, "PMAX03");
+
+    evenementEtValeur.valeur = 255;
+    evenementEtValeur.evenement = LECTURE_ALIMENTATION;
+    PUISSANCE_machine(&evenementEtValeur);    
+
+    evenementEtValeur.evenement = VITESSE_MESUREE;
+    PUISSANCE_machine(&evenementEtValeur);    
+    testsEnErreur += assertEqualsChar(tableauDeBord.tensionMoyenne.magnitude, 60, "PMAX13");
+    
+    return testsEnErreur;
+}
 unsigned char test_corrigeTensionMoyenne() {
     unsigned char testsEnErreur = 0;
     MagnitudeEtDirection vitesseDemandee;
@@ -173,6 +220,7 @@ unsigned char test_puissance() {
     
     testsEnErreur += test_evalueVitesseDemandee();
     testsEnErreur += test_corrigeTensionMoyenne();
+    testsEnErreur += test_limiteTensionMoyenneMax();
     testsEnErreur += test_calculeVitesseDemandeeSurLecturePotentiometre();
     
     return testsEnErreur;
