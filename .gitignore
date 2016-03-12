@@ -6,3 +6,4 @@ nbproject/*.properties
 nbproject/private
 *.workspace
 *.pdsbak
+.DS_Store
