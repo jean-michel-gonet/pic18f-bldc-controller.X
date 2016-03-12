@@ -1,3 +1,4 @@
 *.pdsprj binary
 *.odg binary
+*.jpg binary
 * eol=crlf
