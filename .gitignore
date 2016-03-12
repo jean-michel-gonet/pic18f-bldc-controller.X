@@ -1,9 +1,8 @@
-# MPLAB files
-Makefile
-nbproject/
-build/
 dist/
-funclist
-
-# C Intermediary files
-*.obj
+build/
+nbproject/*.mk
+nbproject/*.bash
+nbproject/*.properties
+nbproject/private
+*.workspace
+*.pdsbak
