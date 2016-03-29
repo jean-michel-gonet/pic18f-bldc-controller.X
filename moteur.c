@@ -364,6 +364,8 @@ unsigned char test_moteurMesureVitesse() {
     unsigned char testsEnErreur = 0;
     EvenementEtValeur ev = {AUCUN_EVENEMENT, 0};
     
+    reinitialiseMessagesInternes();
+    
     ev.evenement = MOTEUR_PHASE;
     
     ev.valeur = phaseParHall[1];
