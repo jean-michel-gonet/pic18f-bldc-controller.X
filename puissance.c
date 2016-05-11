@@ -2,8 +2,7 @@
 #include "test.h"
 #include "tableauDeBord.h"
 
-#define TENSION_MOYENNE_MIN 10 * 32
-#define TENSION_MOYENNE_MAX 180 * 32
+#define TENSION_MOYENNE_MAX 100 * 32 
 #define TENSION_MOYENNE_MAX_REDUITE 40 * 32
 #define TENSION_ALIMENTATION_MIN 7.4
 #define LECTURE_ALIMENTATION_MIN (unsigned char) (255 * (TENSION_ALIMENTATION_MIN / 2) / 5)
@@ -14,10 +13,13 @@
  */
 static int tensionMoyenneMax = TENSION_MOYENNE_MAX;
 
+#define P 25
+#define I 3
+#define D 40
 
-#define P 32
-#define I 5
-#define D 64
+#define P_ 16
+#define I_ 3
+#define D_ 8
 
 int soustraitAmoinsB(MagnitudeEtDirection *a, 
                      MagnitudeEtDirection *b) {
@@ -33,12 +35,11 @@ int soustraitAmoinsB(MagnitudeEtDirection *a,
             return 0;
     }
     switch (b->direction) {
-        case AVANT:
-            return resultat - b->magnitude;
         case ARRIERE:
             return resultat + b->magnitude;
+        case AVANT:
         default:
-            return 0;
+            return resultat - b->magnitude;
     }
 }
 
@@ -71,11 +72,11 @@ void pidTensionMoyenne(MagnitudeEtDirection *vitesseMesuree,
     // Calcule l'erreur PID:
     erreurP = soustraitAmoinsB(vitesseDemandee, vitesseMesuree);
     erreurI += erreurP;
-    if (erreurI < -200) {
-        erreurI = -200;
+    if (erreurI < -800) {
+        erreurI = -800;
     }
-    if (erreurI > 200) {
-        erreurI = 200;
+    if (erreurI > 800) {
+        erreurI = 800;
     }
     erreurD = erreurP - erreurPrecedente;
     erreurPrecedente = erreurP;
@@ -135,7 +136,9 @@ void evalueVitesseDemandee(unsigned char lecture,
         }
         vitesseDemandee->magnitude = v;
     }
-    
+    if (vitesseDemandee->magnitude < 5) {
+        vitesseDemandee->magnitude = 0;
+    }
     vitesseDemandee->magnitude <<= 1;
 }
 
