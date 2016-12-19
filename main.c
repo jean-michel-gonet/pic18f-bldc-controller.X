@@ -88,9 +88,9 @@ void low_priority interrupt interruptionsBassePriorite() {
             switch (ADCON0bits.CHS) {
                 case 8:
                     enfileEvenement(LECTURE_POTENTIOMETRE, ADRESH);
-                    ADCON0bits.CHS = 13;
+                    ADCON0bits.CHS = 11;
                     break;
-                case 13:
+                case 11:
                     enfileEvenement(LECTURE_ALIMENTATION, ADRESH);
                     ADCON0bits.CHS = 8;
                     break;

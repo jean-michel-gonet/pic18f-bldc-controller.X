@@ -1,0 +1,127 @@
+Category,References,Value,Stock Code,Unit Cost
+Condensateurs,C1,470nF,C320C474M5U5TA+,$0.60
+Condensateurs,C2,10nF,C315C103K1R5TA+,$0.25
+Condensateurs,C3,0.1uF,C320C104M5U5TA+,$0.25
+Condensateurs,C4,470nF,C320C474M5U5TA+,$0.60
+Condensateurs,C5,10nF,C315C103K1R5TA+,$0.25
+Condensateurs,C6,0.1uF,C320C104M5U5TA+,$0.25
+Condensateurs,C7,470nF,C320C474M5U5TA+,$0.60
+Condensateurs,C8,10nF,C315C103K1R5TA+,$0.25
+Condensateurs,C9,0.1uF,C320C104M5U5TA+,$0.25
+Condensateurs,C10,0.1uF,C320C104M5U5TA+,$0.25
+Condensateurs,C11,1000uF,SY 1000uF/35V,$0.40
+Condensateurs,C12,220uF,UVY1V221MPD,$0.40
+Condensateurs,C13,22uF,ECE-A1VN220U,$0.70
+Condensateurs,C14,0.1uF,EEU-FC2A2R2,$0.50
+Condensateurs,C15,0.1uF,C320C104M5U5TA+,$0.25
+Condensateurs,C16,0.1uF,C320C104M5U5TA+,$0.25
+Condensateurs,C17,0.1uF,C320C104M5U5TA+,$0.25
+Condensateurs,C18,220uF,UVY1V221MPD,$0.40
+Résistances,R1,13,MF0207FTE52-13R,$0.15
+Résistances,R2,13,MF0207FTE52-13R,$0.15
+Résistances,R3,33k,MF0207FTE52-33K,$0.15
+Résistances,R4,13,MF0207FTE52-13R,$0.15
+Résistances,R5,13,MF0207FTE52-13R,$0.15
+Résistances,R6,33k,MF0207FTE52-33K,$0.15
+Résistances,R7,13,MF0207FTE52-13R,$0.15
+Résistances,R8,13,MF0207FTE52-13R,$0.15
+Résistances,R9,33k,MF0207FTE52-33K,$0.15
+Résistances,R10,4k7,MF0207FTE52-4K7,$0.15
+Résistances,R11,4k7,MF0207FTE52-4K7,$0.15
+Résistances,R12,4k7,MF0207FTE52-4K7,$0.15
+Résistances,R13,4k7,MF0207FTE52-4K7,$0.15
+Résistances,R14,4k7,MF0207FTE52-4K7,$0.15
+Résistances,R15,150,MF0207FTE52-150R,$0.15
+Résistances,R16,4k7,MF0207FTE52-4K7,$0.15
+Résistances,R17,4k7,MF0207FTE52-4K7,$0.15
+Résistances,R18,150,MF0207FTE52-150R,$0.15
+Résistances,R19,150,MF0207FTE52-150R,$0.15
+Résistances,R20,150,MF0207FTE52-150R,$0.15
+Résistances,RV1,10k,AB 4114503545,$1.25
+Circuits intégrés,U1,IR2301,IR2301PBF,$3.60
+Circuits intégrés,U2,IR2301,IR2301PBF,$3.60
+Circuits intégrés,U3,IR2301,IR2301PBF,$3.60
+Circuits intégrés,U4,PIC18F25K22,PIC18F25K22-I/SP,$3.85
+Circuits intégrés,U5,L78S05CV,L78S05CV,$0.50
+Circuits intégrés,U1A1,Support CI 8 pôles,2050000074158,$0.25
+Circuits intégrés,U2A1,Support CI 8 pôles,2050000074158,$0.25
+Circuits intégrés,U3A1,Support CI 8 pôles,2050000074158,$0.25
+Circuits intégrés,U4A1,Support CI 28 pôles,2050000074271,$0.60
+Transistors,Q1,IRLB3813PBF,IRLB3813PBF,$1.95
+Transistors,Q2,IRLB3813PBF,IRLB3813PBF,$1.95
+Transistors,Q3,IRLB3813PBF,IRLB3813PBF,$1.95
+Transistors,Q4,IRLB3813PBF,IRLB3813PBF,$1.95
+Transistors,Q5,IRLB3813PBF,IRLB3813PBF,$1.95
+Transistors,Q6,IRLB3813PBF,IRLB3813PBF,$1.95
+Diodes,D1,BAT48,BAT48,$0.35
+Diodes,D2,BAT48,BAT48,$0.35
+Diodes,D3,BAT48,BAT48,$0.35
+Diodes,D4,BAT48,BAT48,$0.35
+Diodes,D5,BAT48,BAT48,$0.35
+Diodes,D6,BAT48,BAT48,$0.35
+Diodes,D7,L 53 HD,L 53 HD,$0.15
+Miscellaneous,L1,22uH,744750420220,$2.20
+Miscellaneous,WI1,10AWG Silicone Wire 1m (Red),78181,$2.84
+Miscellaneous,WI2,EC5 Female Connector,92426,$0.50
+Miscellaneous,WI3,3.5mm 3 wire Bullet-connector,10255,$1.00
+Miscellaneous,WI4,12AWG Silicone Wire 1m (Blue),78184,$1.46
+Miscellaneous,WI5,12AWG Silicone Wire 1m (Red),78182,$1.98
+Miscellaneous,WI6,12AWG Silicone Wire 1m (Yellow),78185,$1.46
+Miscellaneous,WI7,10AWG Silicone Wire 1m (Black),78180,$2.84
+Connecteurs,J1,B06B-XASK-1,B06B-XASK-1,$1.25
+Connecteurs,J2,B04B-XASK-1,B04B-XASK-1,$0.85
+Connecteurs,J3,B03B-XASK-1,B03B-XASK-1,$0.70
+Connecteurs,J4,B02B-XASK-1,B02B-XASK-1,$0.50
+Connecteurs,J5,RJ12 MEB6/6PL,MEB6/6PL,$0.75
+Connecteurs,J6,FC68148,FC681478,$1.00
+Connecteurs,J7,MTS-101,SP 165,$0.90
+Connecteurs,J8,barrette mâle coudée 6 pôles,088-1-006-0-S-XS0-1080,$0.40
+Connecteurs,J1A1,XAP-06V-1,XAP-06V-1,$0.45
+Connecteurs,J1B1,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J1B2,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J1B3,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J1B4,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J1B5,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J1B6,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J2A1,XAP-04V-1,XAP-04V-1,$0.35
+Connecteurs,J2B1,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J2B2,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J2B3,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J2B4,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J3A1,XAP-03V-1,XAP-03V-1,$0.30
+Connecteurs,J3B1,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J3B2,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J3B3,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J4A1,XAP-02V-1,XAP-02V-1,$0.25
+Connecteurs,J4B1,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J4B2,BXA-001T-P0.6,BXA-001T-P0.6,$0.20
+Connecteurs,J6A1,Connecteur basse tension mâle,FC6814785,$1.10
+Connecteurs,P1,746594RG,93014c243,$0.15
+Connecteurs,P2,746594RG,93014c243,$0.15
+Connecteurs,P11,746594RG,93014c243,$0.15
+Connecteurs,P12,746594RG,93014c243,$0.15
+Connecteurs,P13,746594RG,93014c243,$0.15
+Dissipateurs,T1,SCI A18-9B,A18-9B,$0.95
+Dissipateurs,T2,SK 482 100 SA,10101589,$8.15
+Dissipateurs,T3,SCI A18-9B,A18-9B,$0.95
+Dissipateurs,T4,SCI A18-9B,A18-9B,$0.95
+Dissipateurs,T5,SCI A18-9B,A18-9B,$0.95
+Dissipateurs,T6,SCI A18-9B,A18-9B,$0.95
+Dissipateurs,T7,SCI A18-9B,A18-9B,$0.95
+Dissipateurs,T8,SCI A18-9B,A18-9B,$0.95
+Dissipateurs,T9,V4330N,V4330N,$1.50
+Quincaillerie,QUINQ1,ECROU M3,106857,$0.02
+Quincaillerie,QUINQ2,ROND. M3,194723,$0.02
+Quincaillerie,QUINQ3,VIS M3,815322,$0.04
+Quincaillerie,QUINQ4,ECROU M3,106857,$0.02
+Quincaillerie,QUINQ5,ROND. M3,194723,$0.02
+Quincaillerie,QUINQ6,VIS M3,815322,$0.04
+Quincaillerie,QUINQ7,ECROU M3,106857,$0.02
+Quincaillerie,QUINQ8,ROND. M3,194723,$0.02
+Quincaillerie,QUINQ9,VIS M3,815322,$0.04
+Quincaillerie,QUINQ10,ECROU M3,106857,$0.02
+Quincaillerie,QUINQ11,ROND. M3,194723,$0.02
+Quincaillerie,QUINQ12,VIS M3,815322,$0.04
+Quincaillerie,QUINQ13,ECROU M3,106857,$0.02
+Quincaillerie,QUINQ14,ROND. M3,194723,$0.02
+Quincaillerie,QUINQ15,VIS M3,815322,$0.04

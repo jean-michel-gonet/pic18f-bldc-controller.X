@@ -7,7 +7,7 @@ void calculePwmServoRouesAvant(unsigned char position) {
     x <<= 3;
     x += 2000;
     tableauDeBord.positionRouesAvant.tempsBas.valeur = 25535 + x;
-    tableauDeBord.positionRouesAvant.tempsHaut.valeur = 65535 - x;
+    tableauDeBord.positionRouesAvant.tempsHaut.valeur = (unsigned int) 65535 - x;
 }
 
 /**
@@ -27,15 +27,15 @@ unsigned test_calculePwmServoRouesAvant() {
     
     calculePwmServoRouesAvant(128);
     assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 3024, "DIR01");
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 3024, "DIR01");
+    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 3024, "DIR01a");
 
     calculePwmServoRouesAvant(0);
     assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 2000, "DIR11");
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 2000, "DIR11");
+    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 2000, "DIR11a");
 
     calculePwmServoRouesAvant(255);
     assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 4040, "DIR21");
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 4040, "DIR21");
+    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 4040, "DIR21a");
 
     return testsEnErreur;
 }
@@ -46,7 +46,7 @@ unsigned test_directionMachine() {
 
     DIRECTION_machine(&ev);
     assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 2000, "DIRM11");
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 2000, "DIRM11");
+    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 2000, "DIRM11a");
 
     return testsEnErreur;
 }

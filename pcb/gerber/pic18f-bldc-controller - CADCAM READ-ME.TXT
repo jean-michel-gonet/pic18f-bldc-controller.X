@@ -1,0 +1,71 @@
+PIC18F-BLDC-CONTROLLER INFORMATION FILE
+=======================================
+
+In case of difficulty, please e-mail jmgonet@yahoo.com
+
+Tool set up for Proteus layout 'pic18f-bldc-controller.pdsprj'.
+CADCAM generated at 9:46:17 AM on Saturday, November 19, 2016.
+
+Connector J5:
+=============
+Pads for connector J5 are rectangular through-hole. 
+I've marked their contour in layer "Mechanical 1".
+
+If you can't make it rectangular, then oval will do it as well.
+
+
+File List
+---------
+Top Copper              : pic18f-bldc-controller - CADCAM Top Copper.TXT
+Bottom Copper           : pic18f-bldc-controller - CADCAM Bottom Copper.TXT
+Top Silk Screen         : pic18f-bldc-controller - CADCAM Top Silk Screen.TXT
+Top Solder Resist       : pic18f-bldc-controller - CADCAM Top Solder Resist.TXT
+Bottom Solder Resist    : pic18f-bldc-controller - CADCAM Bottom Solder Resist.TXT
+Mechanical 1            : pic18f-bldc-controller - CADCAM Mechanical 1.TXT
+Drill                   : pic18f-bldc-controller - CADCAM Drill.TXT
+
+Photoplotter Setup
+------------------
+Format: RS274X, ASCII, 2.4, imperial, absolute, eob=*, LZO
+Notes:  D=Diameter, S=Side, W=Width, H=Height, C=Chamfer
+
+D10	CIRCLE  D=25th                                                            DRAW
+D11	CIRCLE  D=40th                                                            DRAW
+D12	CIRCLE  D=90th                                                            DRAW
+D13	CIRCLE  D=30th                                                            FLASH
+D14	SQUARE  S=80th                                                            FLASH
+D15	CIRCLE  D=354.3th                                                         FLASH
+D16	CIRCLE  D=70th                                                            FLASH
+D17	SQUARE  S=50th                                                            FLASH
+D18	CIRCLE  D=50th                                                            FLASH
+D19	CIRCLE  D=80th                                                            FLASH
+D70	CIRCLE  D=90th                                                            FLASH
+D71	CIRCLE  D=2.4th                                                           DRAW
+D20	CIRCLE  D=8th                                                             DRAW
+D21	CIRCLE  D=10th                                                            DRAW
+D22	CIRCLE  D=15th                                                            DRAW
+D23	CIRCLE  D=0                                                               DRAW
+D24	CIRCLE  D=40th                                                            FLASH
+D25	CIRCLE  D=433th                                                           FLASH
+D26	CIRCLE  D=60th                                                            FLASH
+D27	CIRCLE  D=100th                                                           FLASH
+
+NC Drill Setup
+--------------
+Format: ASCII, 2.4, imperial, absolute, eob=<CR><LF>, no zero suppression.
+Notes:  Tool sizes are diameters. Layer sets are in brackets - 0=TOP, 15=BOTTOM, 1-14=INNER.
+
+T01	15th (0-15) Plated
+T02	40th (0-15) Plated
+T03	157.4th (0-15) Plated
+T04	30th (0-15) Plated
+T05	125.9th (0-15) Plated
+T06	128th (0-15) Plated
+T07	295.2th (0-15) Plated
+T08	39.3th (0-15) Plated
+T09	86.6th (0-15) Plated
+T10	255.9th (0-15) Plated
+T11	50th (0-15) Plated
+
+
+[END OF FILE]

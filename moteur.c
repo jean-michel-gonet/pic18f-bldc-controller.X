@@ -115,7 +115,7 @@ static unsigned char mesureDeVitessePhase0 = 0;
 
 /**
  * Compare la phase spécifiée avec la phase précédente, et accumule le compte
- * de phases dans {@code mesureDeVitesse}.
+ * de phases dans {@param mesureDeVitesse}.
  * @param phase La phase actuelle.
  * @param mesureDeVitesse Pour accumuler le nombre de phases détectées.
  */
@@ -128,33 +128,28 @@ void mesureVitesse(unsigned char phase, MagnitudeEtDirection *mesureDeVitesse) {
         step = mesureDeVitessePhase0 - phase;
         switch(step) {
             case -1:
-                direction = AVANT;
-                break;
             case 5:
                 direction = AVANT;
                 break;
 
             case 1:
-                direction = ARRIERE;
-                break;
             case -5:
                 direction = ARRIERE;
                 break;
         }
     }
+
     mesureDeVitessePhase0 = phase;
 
     if (direction != INDETERMINEE) {
-        if (mesureDeVitesse->direction == INDETERMINEE) {
+        if ( (mesureDeVitesse->direction == INDETERMINEE) || (mesureDeVitesse->magnitude == 0) ) {
             mesureDeVitesse->direction = direction;
+            mesureDeVitesse->magnitude = 1;
         }
-
         if (direction == mesureDeVitesse->direction) {
             mesureDeVitesse->magnitude++;
         } else {
-            if (--mesureDeVitesse->magnitude == 0) {
-                mesureDeVitesse->direction = direction;
-            }
+            mesureDeVitesse->magnitude--;
         }
     }
 }
@@ -213,7 +208,7 @@ unsigned char test_mesureVitesseMarcheAvant() {
         }
     }
     assertEqualsChar(mesureDeVitesse.direction, AVANT, "MOMV_01");
-    assertEqualsChar(mesureDeVitesse.magnitude, 59, "MOMV_02");
+    assertEqualsChar(mesureDeVitesse.magnitude, 60, "MOMV_02");
     
     return testsEnErreur;
 }
@@ -228,7 +223,7 @@ unsigned char test_mesureVitesseMarcheArriere() {
         }
     }
     assertEqualsChar(mesureDeVitesse.direction, ARRIERE, "MOMV_11");
-    assertEqualsChar(mesureDeVitesse.magnitude, 59, "MOMV_12");
+    assertEqualsChar(mesureDeVitesse.magnitude, 60, "MOMV_12");
     
     return testsEnErreur;
 }
@@ -364,6 +359,8 @@ unsigned char test_moteurMesureVitesse() {
     unsigned char testsEnErreur = 0;
     EvenementEtValeur ev = {AUCUN_EVENEMENT, 0};
     
+    reinitialiseMessagesInternes();
+    
     ev.evenement = MOTEUR_PHASE;
     
     ev.valeur = phaseParHall[1];
@@ -377,7 +374,7 @@ unsigned char test_moteurMesureVitesse() {
     MOTEUR_machine(&ev);
 
     testsEnErreur += assertEqualsChar(tableauDeBord.vitesseMesuree.direction, AVANT, "MOMEVE01");
-    testsEnErreur += assertEqualsChar(tableauDeBord.vitesseMesuree.magnitude, 2, "MOMEVE02");
+    testsEnErreur += assertEqualsChar(tableauDeBord.vitesseMesuree.magnitude, 3, "MOMEVE02");
     testsEnErreur += assertEqualsChar(defileMessageInterne()->evenement, VITESSE_MESUREE, "MOMEVE03");
     testsEnErreur += assertEqualsChar(defileMessageInterne()->evenement, 0, "MOMEVE04");
             

@@ -7,3 +7,4 @@ nbproject/private
 *.workspace
 *.pdsbak
 .DS_Store
+.~lock*
