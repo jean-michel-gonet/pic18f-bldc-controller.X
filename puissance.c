@@ -2,10 +2,12 @@
 #include "test.h"
 #include "tableauDeBord.h"
 
-#define TENSION_MOYENNE_MAX 100 * 32 
+#define TENSION_MOYENNE_MAX 180 * 32 
 #define TENSION_MOYENNE_MAX_REDUITE 40 * 32
 #define TENSION_ALIMENTATION_MIN 7.4
 #define LECTURE_ALIMENTATION_MIN (unsigned char) (255 * (TENSION_ALIMENTATION_MIN / 2) / 5)
+
+#define NO_PID
 
 /** 
  * La tension moyenne maximum peut varier si la tension d'alimentation
@@ -13,9 +15,9 @@
  */
 static int tensionMoyenneMax = TENSION_MOYENNE_MAX;
 
-#define P 25
+#define P 16
 #define I 3
-#define D 40
+#define D 48
 
 #define P_ 16
 #define I_ 3
@@ -63,7 +65,11 @@ void reinitialisePid() {
  * @param vitesseDemandee Dernière Vitesse demandée.
  */
 void pidTensionMoyenne(MagnitudeEtDirection *vitesseMesuree, 
-                       MagnitudeEtDirection *vitesseDemandee) {
+                       MagnitudeEtDirection *vitesseDemandee) {        
+#ifdef NO_PID
+    tableauDeBord.tensionMoyenne.direction = vitesseDemandee->direction;
+    tableauDeBord.tensionMoyenne.magnitude = vitesseDemandee->magnitude;
+#else
     int erreurD;
     int erreurP;
     int correction;
@@ -91,10 +97,14 @@ void pidTensionMoyenne(MagnitudeEtDirection *vitesseMesuree,
 
     // Limite la tension moyenne:
     if (tensionMoyenne < -tensionMoyenneMax) {
+        // Pour éviter d'accumuler de l'erreur si on limite la puissance.
         tensionMoyenne = -tensionMoyenneMax;
+        erreurI = 0;
     }
     if (tensionMoyenne > tensionMoyenneMax) {
         tensionMoyenne = tensionMoyenneMax;
+        // Pour éviter d'accumuler de l'erreur si on limite la puissance.
+        erreurI = 0;
     }
 
     // Transfère la tension moyenne sur le tableau de bord:
@@ -107,6 +117,7 @@ void pidTensionMoyenne(MagnitudeEtDirection *vitesseMesuree,
     }
     magnitude >>= 5;
     tableauDeBord.tensionMoyenne.magnitude = (unsigned char) magnitude;
+#endif
 }
 
 /**
