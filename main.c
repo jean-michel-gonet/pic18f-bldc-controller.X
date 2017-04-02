@@ -15,6 +15,7 @@
 #include "puissance.h"
 #include "moteur.h"
 #include "direction.h"
+#include "capture.h"
 
 /**
  * Bits de configuration:
@@ -40,6 +41,16 @@ typedef enum {
     TEMPS_HAUT,
     TEMPS_BAS
 } EtatGenerateurPWMServo;
+
+typedef enum {
+    CAPTURE_FLANC_DESCENDANT = 0x04,
+    CAPTURE_FLANC_MONTANT = 0x05
+} CaptureDeFlanc;
+
+typedef enum {
+    CANAL_RC_DIRECTION = 0,
+    CANAL_RC_VITESSE = 1
+} CanalRc;
 
 /**
  * Routine de traitement des interruptions de haute priorité.
@@ -77,7 +88,7 @@ void low_priority interrupt interruptionsBassePriorite() {
     unsigned char hall;
     static unsigned char hall0 = 0;
     static int tempsMesureVitesse = TEMPS_BASE_DE_TEMPS;
-    static unsigned int instantCapture4, instantCapture5;
+    unsigned char mesureRc;
     static int mesureAdc = 0;
 
     // Traitement des conversions AD:
@@ -105,38 +116,32 @@ void low_priority interrupt interruptionsBassePriorite() {
     // Capture de l'entrée CCP4:
     if (PIR4bits.CCP4IF) {
         PIR4bits.CCP4IF = 0;
-        if (PORTBbits.RB0) {
-            CCP4CONbits.CCP4M = 4;          // Capture du flanc descendant.
-            instantCapture4 = CCPR4;
-        } else {
-            CCP4CONbits.CCP4M = 5;          // Capture du flanc montant.
-
-            instantCapture4 = CCPR4 - instantCapture4;
-            instantCapture4 -= 2000;
-            instantCapture4 >>= 3;
-            enfileEvenement(LECTURE_RC_GAUCHE_DROITE, (unsigned char) instantCapture4);
+        switch (CCP4CONbits.CCP4M) {
+            case CAPTURE_FLANC_MONTANT:
+                captureFlancMontant(CANAL_RC_DIRECTION, CCPR4);
+                CCP4CONbits.CCP4M = CAPTURE_FLANC_DESCENDANT;
+                break;
+            case CAPTURE_FLANC_DESCENDANT:
+                mesureRc = captureFlancDescendant(CANAL_RC_DIRECTION, CCPR4);
+                enfileEvenement(LECTURE_RC_GAUCHE_DROITE, mesureRc);
+                CCP4CONbits.CCP4M = CAPTURE_FLANC_MONTANT;
+                break;
         }
     }
 
     // Capture de l'entrée CCP5:
     if (PIR4bits.CCP5IF) {
         PIR4bits.CCP5IF = 0;
-        if (PORTAbits.RA4) {
-            CCP5CONbits.CCP5M = 4;          // Capture du flanc descendant.
-            instantCapture5 = CCPR5;
-        } else {
-            CCP5CONbits.CCP5M = 5;          // Capture du flanc montant.
-
-            instantCapture5 = CCPR5 - instantCapture5;
-            if (instantCapture5 > 4000) {
-                instantCapture5 = 4000;
-            }
-            if (instantCapture5 < 2000) {
-                instantCapture5 = 2000;
-            }
-            instantCapture5 -= 2000;
-            instantCapture5 >>= 3;
-            enfileEvenement(LECTURE_RC_AVANT_ARRIERE, (unsigned char) instantCapture5);
+        switch (CCP5CONbits.CCP5M) {
+            case CAPTURE_FLANC_MONTANT:
+                captureFlancMontant(CANAL_RC_VITESSE, CCPR5);
+                CCP5CONbits.CCP5M = CAPTURE_FLANC_DESCENDANT;
+                break;
+            case CAPTURE_FLANC_DESCENDANT:
+                mesureRc = captureFlancDescendant(CANAL_RC_VITESSE, CCPR5);
+                enfileEvenement(LECTURE_RC_AVANT_ARRIERE, mesureRc);
+                CCP5CONbits.CCP5M = CAPTURE_FLANC_MONTANT;
+                break;
         }
     }
 
@@ -312,6 +317,7 @@ void main() {
     ft += test_puissance();
     ft += test_moteur();
     ft += test_direction();
+    ft += test_capture();
 
     // Affiche le résultat des tests:
     printf("%u tests en erreur\r\n",ft);
