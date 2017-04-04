@@ -46,38 +46,32 @@ unsigned char captureFlancDescendant(unsigned char canal, unsigned int instant) 
 }
 
 #ifdef TEST
-unsigned char detecte_une_pulsation_sur_un_canal() {
-    unsigned char ft = 0;
-
+void detecte_une_pulsation_sur_un_canal() {
     initialiseCapture();
 
     captureFlancMontant(0, 10000);
-    ft += assertEqualsChar(captureFlancDescendant(0, 11000),   0, "CP1C01");
+    verifieEgalite("CP1C01", captureFlancDescendant(0, 11000),   0);
 
     captureFlancMontant(0, 10000);
-    ft += assertEqualsChar(captureFlancDescendant(0, 12000),   0, "CP1C02");
+    verifieEgalite("CP1C02", captureFlancDescendant(0, 12000),   0);
 
     captureFlancMontant(0, 10000);
-    ft += assertEqualsChar(captureFlancDescendant(0, 12500),  62, "CP1C03");
+    verifieEgalite("CP1C03", captureFlancDescendant(0, 12500),  62);
 
     captureFlancMontant(0, 10000);
-    ft += assertEqualsChar(captureFlancDescendant(0, 13000), 125, "CP1C04");
+    verifieEgalite("CP1C04", captureFlancDescendant(0, 13000), 125);
     
     captureFlancMontant(0, 10000);
-    ft += assertEqualsChar(captureFlancDescendant(0, 13500), 187, "CP1C05");
+    verifieEgalite("CP1C05", captureFlancDescendant(0, 13500), 187);
     
     captureFlancMontant(0, 10000);
-    ft += assertEqualsChar(captureFlancDescendant(0, 14000), 250, "CP1C06");
+    verifieEgalite("CP1C06", captureFlancDescendant(0, 14000), 250);
     
     captureFlancMontant(0, 10000);
-    ft += assertEqualsChar(captureFlancDescendant(0, 15000), 250, "CP1C07");
-
-    return ft;
+    verifieEgalite("CP1C07", captureFlancDescendant(0, 15000), 250);
 }
 
-unsigned char detecte_des_pulsations_sur_deux_canaux() {
-    unsigned char ft = 0;
-
+void detecte_des_pulsations_sur_deux_canaux() {
     initialiseCapture();
 
     captureFlancMontant(0, 10000);
@@ -86,35 +80,24 @@ unsigned char detecte_des_pulsations_sur_deux_canaux() {
     captureFlancMontant(3, 13000);
     captureFlancMontant(4, 14000);
 
-    ft += assertEqualsChar(captureFlancDescendant(0, 13000),   125, "CP2C00");
-    ft += assertEqualsChar(captureFlancDescendant(1, 14000),   125, "CP2C01");
-    ft += assertEqualsChar(captureFlancDescendant(2, 15000),   125, "CP2C02");
-    ft += assertEqualsChar(captureFlancDescendant(3, 16000),   125, "CP2C03");
-    ft += assertEqualsChar(captureFlancDescendant(4, 17000),   125, "CP2C04");
-
-    return ft;
+    verifieEgalite("CP2C00", captureFlancDescendant(0, 13000),   125);
+    verifieEgalite("CP2C01", captureFlancDescendant(1, 14000),   125);
+    verifieEgalite("CP2C02", captureFlancDescendant(2, 15000),   125);
+    verifieEgalite("CP2C03", captureFlancDescendant(3, 16000),   125);
+    verifieEgalite("CP2C04", captureFlancDescendant(4, 17000),   125);
 }
 
-unsigned char detecte_une_pulsation_avec_debordement() {
-    unsigned char ft = 0;
-
+void detecte_une_pulsation_avec_debordement() {
     initialiseCapture();
 
     captureFlancMontant(0, 65500);
 
-    ft += assertEqualsChar(captureFlancDescendant(0, 2964),   125, "CPDE00");
-
-    return ft;
-    
+    verifieEgalite("CPDE00", captureFlancDescendant(0, 2964),   125);
 }
 
-unsigned char test_capture() {
-    unsigned char ft = 0;
-    
-    ft += detecte_une_pulsation_sur_un_canal();
-    ft += detecte_des_pulsations_sur_deux_canaux();
-    ft += detecte_une_pulsation_avec_debordement();
-    
-    return ft;
+void test_capture() {
+    detecte_une_pulsation_sur_un_canal();
+    detecte_des_pulsations_sur_deux_canaux();
+    detecte_une_pulsation_avec_debordement();
 }
 #endif

@@ -3,7 +3,7 @@
 #include "domaine.h"
 #include "tableauDeBord.h"
 #include "test.h"
-#include "file.h"
+#include "evenements.h"
 #include "moteur.h"
 
 typedef struct {
@@ -183,22 +183,17 @@ void MOTEUR_machine(EvenementEtValeur *ev) {
 
 #ifdef TEST
 #define P 30
-unsigned char test_phaseSelonHall() {
-    unsigned char ft = 0;
-
-    ft += assertEqualsChar(ERROR, phaseSelonHall(0), "PSH-00");
-    ft += assertEqualsChar(1, phaseSelonHall(0b001), "PSH-01");
-    ft += assertEqualsChar(2, phaseSelonHall(0b011), "PSH-02");
-    ft += assertEqualsChar(3, phaseSelonHall(0b010), "PSH-03");
-    ft += assertEqualsChar(4, phaseSelonHall(0b110), "PSH-04");
-    ft += assertEqualsChar(5, phaseSelonHall(0b100), "PSH-05");
-    ft += assertEqualsChar(6, phaseSelonHall(0b101), "PSH-06");
-    ft += assertEqualsChar(ERROR, phaseSelonHall(7), "PSH-07");
-
-    return ft;
+void test_phaseSelonHall() {
+    verifieEgalite("PSH-00", ERROR, phaseSelonHall(0));
+    verifieEgalite("PSH-01", 1, phaseSelonHall(0b001));
+    verifieEgalite("PSH-02", 2, phaseSelonHall(0b011));
+    verifieEgalite("PSH-03", 3, phaseSelonHall(0b010));
+    verifieEgalite("PSH-04", 4, phaseSelonHall(0b110));
+    verifieEgalite("PSH-05", 5, phaseSelonHall(0b100));
+    verifieEgalite("PSH-06", 6, phaseSelonHall(0b101));
+    verifieEgalite("PSH-07", ERROR, phaseSelonHall(7));
 }
-unsigned char test_mesureVitesseMarcheAvant() {
-    unsigned char testsEnErreur = 0;
+void test_mesureVitesseMarcheAvant() {
     unsigned char tour, phase;
     MagnitudeEtDirection mesureDeVitesse = {INDETERMINEE, 0};
     
@@ -207,13 +202,10 @@ unsigned char test_mesureVitesseMarcheAvant() {
             mesureVitesse(phase, &mesureDeVitesse);
         }
     }
-    assertEqualsChar(mesureDeVitesse.direction, AVANT, "MOMV_01");
-    assertEqualsChar(mesureDeVitesse.magnitude, 60, "MOMV_02");
-    
-    return testsEnErreur;
+    verifieEgalite("MOMV_01", mesureDeVitesse.direction, AVANT);
+    verifieEgalite("MOMV_02", mesureDeVitesse.magnitude, 60);
 }
-unsigned char test_mesureVitesseMarcheArriere() {
-    unsigned char testsEnErreur = 0;
+void test_mesureVitesseMarcheArriere() {
     unsigned char tour, phase;
     MagnitudeEtDirection mesureDeVitesse = {INDETERMINEE, 0};
     
@@ -222,14 +214,10 @@ unsigned char test_mesureVitesseMarcheArriere() {
             mesureVitesse(phase, &mesureDeVitesse);
         }
     }
-    assertEqualsChar(mesureDeVitesse.direction, ARRIERE, "MOMV_11");
-    assertEqualsChar(mesureDeVitesse.magnitude, 60, "MOMV_12");
-    
-    return testsEnErreur;
+    verifieEgalite("MOMV_11", mesureDeVitesse.direction, ARRIERE);
+    verifieEgalite("MOMV_12", mesureDeVitesse.magnitude, 60);
 }
-unsigned char test_mesureVitesseInversionMarche() {
-    unsigned char testsEnErreur = 0;
-    
+void test_mesureVitesseInversionMarche() {
     MagnitudeEtDirection mesureDeVitesse = {INDETERMINEE, 0};
     mesureDeVitessePhase0 = 6;
     
@@ -242,121 +230,112 @@ unsigned char test_mesureVitesseInversionMarche() {
     mesureVitesse(5, &mesureDeVitesse);
     mesureVitesse(4, &mesureDeVitesse);
     
-    assertEqualsChar(mesureDeVitesse.direction, ARRIERE, "MOMV_20a");
-    assertEqualsChar(mesureDeVitesse.magnitude, 2, "MOMV_20b");
-    
-    return testsEnErreur;
+    verifieEgalite("MOMV_20a", mesureDeVitesse.direction, ARRIERE);
+    verifieEgalite("MOMV_20b", mesureDeVitesse.magnitude, 2);
 }
-unsigned char test_calculeAmplitudesMarcheArriere() {
-    unsigned char testsEnErreur = 0;
+void test_calculeAmplitudesMarcheArriere() {
     MagnitudeEtDirection tensionMoyenne = {ARRIERE, P};
     
     calculeAmplitudes(&tensionMoyenne, 1);
-    testsEnErreur += assertEqualsChar(AH, 0, "PWMAR1AH");
-    testsEnErreur += assertEqualsChar(AL, 0, "PWMAR1AL");
-    testsEnErreur += assertEqualsChar(BH, P, "PWMAR1BH");
-    testsEnErreur += assertEqualsChar(BL, 0, "PWMAR1BL");
-    testsEnErreur += assertEqualsChar(CH, 0, "PWMAR1CH");
-    testsEnErreur += assertEqualsChar(CL, 1, "PWMAR1CL");
+    verifieEgalite("PWMAR1AH", AH, 0);
+    verifieEgalite("PWMAR1AL", AL, 0);
+    verifieEgalite("PWMAR1BH", BH, P);
+    verifieEgalite("PWMAR1BL", BL, 0);
+    verifieEgalite("PWMAR1CH", CH, 0);
+    verifieEgalite("PWMAR1CL", CL, 1);
 
     calculeAmplitudes(&tensionMoyenne, 2);
-    testsEnErreur += assertEqualsChar(AH, 0, "PWMAR2AH");
-    testsEnErreur += assertEqualsChar(AL, 1, "PWMAR2AL");
-    testsEnErreur += assertEqualsChar(BH, P, "PWMAR2BH");
-    testsEnErreur += assertEqualsChar(BL, 0, "PWMAR2BL");
-    testsEnErreur += assertEqualsChar(CH, 0, "PWMAR2CH");
-    testsEnErreur += assertEqualsChar(CL, 0, "PWMAR2CL");
+    verifieEgalite("PWMAR2AH", AH, 0);
+    verifieEgalite("PWMAR2AL", AL, 1);
+    verifieEgalite("PWMAR2BH", BH, P);
+    verifieEgalite("PWMAR2BL", BL, 0);
+    verifieEgalite("PWMAR2CH", CH, 0);
+    verifieEgalite("PWMAR2CL", CL, 0);
 
     calculeAmplitudes(&tensionMoyenne, 3);
-    testsEnErreur += assertEqualsChar(AH, 0, "PWMAR3AH");
-    testsEnErreur += assertEqualsChar(AL, 1, "PWMAR3AL");
-    testsEnErreur += assertEqualsChar(BH, 0, "PWMAR3BH");
-    testsEnErreur += assertEqualsChar(BL, 0, "PWMAR3BL");
-    testsEnErreur += assertEqualsChar(CH, P, "PWMAR3CH");
-    testsEnErreur += assertEqualsChar(CL, 0, "PWMAR3CL");
+    verifieEgalite("PWMAR3AH", AH, 0);
+    verifieEgalite("PWMAR3AL", AL, 1);
+    verifieEgalite("PWMAR3BH", BH, 0);
+    verifieEgalite("PWMAR3BL", BL, 0);
+    verifieEgalite("PWMAR3CH", CH, P);
+    verifieEgalite("PWMAR3CL", CL, 0);
 
     calculeAmplitudes(&tensionMoyenne, 4);
-    testsEnErreur += assertEqualsChar(AH, 0, "PWMAR4AH");
-    testsEnErreur += assertEqualsChar(AL, 0, "PWMAR4AL");
-    testsEnErreur += assertEqualsChar(BH, 0, "PWMAR4BH");
-    testsEnErreur += assertEqualsChar(BL, 1, "PWMAR4BL");
-    testsEnErreur += assertEqualsChar(CH, P, "PWMAR4CH");
-    testsEnErreur += assertEqualsChar(CL, 0, "PWMAR4CL");
+    verifieEgalite("PWMAR4AH", AH, 0);
+    verifieEgalite("PWMAR4AL", AL, 0);
+    verifieEgalite("PWMAR4BH", BH, 0);
+    verifieEgalite("PWMAR4BL", BL, 1);
+    verifieEgalite("PWMAR4CH", CH, P);
+    verifieEgalite("PWMAR4CL", CL, 0);
 
     calculeAmplitudes(&tensionMoyenne, 5);
-    testsEnErreur += assertEqualsChar(AH, P, "PWMAR5AH");
-    testsEnErreur += assertEqualsChar(AL, 0, "PWMAR5AL");
-    testsEnErreur += assertEqualsChar(BH, 0, "PWMAR5BH");
-    testsEnErreur += assertEqualsChar(BL, 1, "PWMAR5BL");
-    testsEnErreur += assertEqualsChar(CH, 0, "PWMAR5CH");
-    testsEnErreur += assertEqualsChar(CL, 0, "PWMAR5CL");
+    verifieEgalite("PWMAR5AH", AH, P);
+    verifieEgalite("PWMAR5AL", AL, 0);
+    verifieEgalite("PWMAR5BH", BH, 0);
+    verifieEgalite("PWMAR5BL", BL, 1);
+    verifieEgalite("PWMAR5CH", CH, 0);
+    verifieEgalite("PWMAR5CL", CL, 0);
 
     calculeAmplitudes(&tensionMoyenne, 6);
-    testsEnErreur += assertEqualsChar(AH, P, "PWMAR6AH");
-    testsEnErreur += assertEqualsChar(AL, 0, "PWMAR6AL");
-    testsEnErreur += assertEqualsChar(BH, 0, "PWMAR6BH");
-    testsEnErreur += assertEqualsChar(BL, 0, "PWMAR6BL");
-    testsEnErreur += assertEqualsChar(CH, 0, "PWMAR6CH");
-    testsEnErreur += assertEqualsChar(CL, 1, "PWMAR6CL");
-
-    return testsEnErreur;
+    verifieEgalite("PWMAR6AH", AH, P);
+    verifieEgalite("PWMAR6AL", AL, 0);
+    verifieEgalite("PWMAR6BH", BH, 0);
+    verifieEgalite("PWMAR6BL", BL, 0);
+    verifieEgalite("PWMAR6CH", CH, 0);
+    verifieEgalite("PWMAR6CL", CL, 1);
 }
-unsigned char test_calculeAmplitudesMarcheAvant() {
-    unsigned char testsEnErreur = 0;
+void test_calculeAmplitudesMarcheAvant() {
     MagnitudeEtDirection tensionMoyenne = {AVANT, P};
         
     calculeAmplitudes(&tensionMoyenne, 1);
-    testsEnErreur += assertEqualsChar(AH, 0, "PWMAV1AH");
-    testsEnErreur += assertEqualsChar(AL, 0, "PWMAV1AL");
-    testsEnErreur += assertEqualsChar(BH, 0, "PWMAV1BH");
-    testsEnErreur += assertEqualsChar(BL, 1, "PWMAV1BL");
-    testsEnErreur += assertEqualsChar(CH, P, "PWMAV1CH");
-    testsEnErreur += assertEqualsChar(CL, 0, "PWMAV1CL");
+    verifieEgalite("PWMAV1AH", AH, 0);
+    verifieEgalite("PWMAV1AL", AL, 0);
+    verifieEgalite("PWMAV1BH", BH, 0);
+    verifieEgalite("PWMAV1BL", BL, 1);
+    verifieEgalite("PWMAV1CH", CH, P);
+    verifieEgalite("PWMAV1CL", CL, 0);
 
     calculeAmplitudes(&tensionMoyenne, 2);
-    testsEnErreur += assertEqualsChar(AH, P, "PWMAV2AH");
-    testsEnErreur += assertEqualsChar(AL, 0, "PWMAV2AL");
-    testsEnErreur += assertEqualsChar(BH, 0, "PWMAV2BH");
-    testsEnErreur += assertEqualsChar(BL, 1, "PWMAV2BL");
-    testsEnErreur += assertEqualsChar(CH, 0, "PWMAV2CH");
-    testsEnErreur += assertEqualsChar(CL, 0, "PWMAV2CL");
+    verifieEgalite("PWMAV2AH", AH, P);
+    verifieEgalite("PWMAV2AL", AL, 0);
+    verifieEgalite("PWMAV2BH", BH, 0);
+    verifieEgalite("PWMAV2BL", BL, 1);
+    verifieEgalite("PWMAV2CH", CH, 0);
+    verifieEgalite("PWMAV2CL", CL, 0);
 
     calculeAmplitudes(&tensionMoyenne, 3);
-    testsEnErreur += assertEqualsChar(AH, P, "PWMAV3AH");
-    testsEnErreur += assertEqualsChar(AL, 0, "PWMAV3AL");
-    testsEnErreur += assertEqualsChar(BH, 0, "PWMAV3BH");
-    testsEnErreur += assertEqualsChar(BL, 0, "PWMAV3BL");
-    testsEnErreur += assertEqualsChar(CH, 0, "PWMAV3CH");
-    testsEnErreur += assertEqualsChar(CL, 1, "PWMAV3CL");
+    verifieEgalite("PWMAV3AH", AH, P);
+    verifieEgalite("PWMAV3AL", AL, 0);
+    verifieEgalite("PWMAV3BH", BH, 0);
+    verifieEgalite("PWMAV3BL", BL, 0);
+    verifieEgalite("PWMAV3CH", CH, 0);
+    verifieEgalite("PWMAV3CL", CL, 1);
 
     calculeAmplitudes(&tensionMoyenne, 4);
-    testsEnErreur += assertEqualsChar(AH, 0, "PWMAV4AH");
-    testsEnErreur += assertEqualsChar(AL, 0, "PWMAV4AL");
-    testsEnErreur += assertEqualsChar(BH, P, "PWMAV4BH");
-    testsEnErreur += assertEqualsChar(BL, 0, "PWMAV4BL");
-    testsEnErreur += assertEqualsChar(CH, 0, "PWMAV4CH");
-    testsEnErreur += assertEqualsChar(CL, 1, "PWMAV4CL");
+    verifieEgalite("PWMAV4AH", AH, 0);
+    verifieEgalite("PWMAV4AL", AL, 0);
+    verifieEgalite("PWMAV4BH", BH, P);
+    verifieEgalite("PWMAV4BL", BL, 0);
+    verifieEgalite("PWMAV4CH", CH, 0);
+    verifieEgalite("PWMAV4CL", CL, 1);
 
     calculeAmplitudes(&tensionMoyenne, 5);
-    testsEnErreur += assertEqualsChar(AH, 0, "PWMAV5AH");
-    testsEnErreur += assertEqualsChar(AL, 1, "PWMAV5AL");
-    testsEnErreur += assertEqualsChar(BH, P, "PWMAV5BH");
-    testsEnErreur += assertEqualsChar(BL, 0, "PWMAV5BL");
-    testsEnErreur += assertEqualsChar(CH, 0, "PWMAV5CH");
-    testsEnErreur += assertEqualsChar(CL, 0, "PWMAV5CL");
+    verifieEgalite("PWMAV5AH", AH, 0);
+    verifieEgalite("PWMAV5AL", AL, 1);
+    verifieEgalite("PWMAV5BH", BH, P);
+    verifieEgalite("PWMAV5BL", BL, 0);
+    verifieEgalite("PWMAV5CH", CH, 0);
+    verifieEgalite("PWMAV5CL", CL, 0);
 
     calculeAmplitudes(&tensionMoyenne, 6);
-    testsEnErreur += assertEqualsChar(AH, 0, "PWMAV6AH");
-    testsEnErreur += assertEqualsChar(AL, 1, "PWMAV6AL");
-    testsEnErreur += assertEqualsChar(BH, 0, "PWMAV6BH");
-    testsEnErreur += assertEqualsChar(BL, 0, "PWMAV6BL");
-    testsEnErreur += assertEqualsChar(CH, P, "PWMAV6CH");
-    testsEnErreur += assertEqualsChar(CL, 0, "PWMAV6CL");
-
-    return testsEnErreur;
+    verifieEgalite("PWMAV6AH", AH, 0);
+    verifieEgalite("PWMAV6AL", AL, 1);
+    verifieEgalite("PWMAV6BH", BH, 0);
+    verifieEgalite("PWMAV6BL", BL, 0);
+    verifieEgalite("PWMAV6CH", CH, P);
+    verifieEgalite("PWMAV6CL", CL, 0);
 }
-unsigned char test_moteurMesureVitesse() {
-    unsigned char testsEnErreur = 0;
+void test_moteurMesureVitesse() {
     EvenementEtValeur ev = {AUCUN_EVENEMENT, 0};
     
     reinitialiseMessagesInternes();
@@ -373,16 +352,12 @@ unsigned char test_moteurMesureVitesse() {
     ev.evenement = BASE_DE_TEMPS;
     MOTEUR_machine(&ev);
 
-    testsEnErreur += assertEqualsChar(tableauDeBord.vitesseMesuree.direction, AVANT, "MOMEVE01");
-    testsEnErreur += assertEqualsChar(tableauDeBord.vitesseMesuree.magnitude, 3, "MOMEVE02");
-    testsEnErreur += assertEqualsChar(defileMessageInterne()->evenement, VITESSE_MESUREE, "MOMEVE03");
-    testsEnErreur += assertEqualsChar(defileMessageInterne()->evenement, 0, "MOMEVE04");
-            
-    return testsEnErreur;
+    verifieEgalite("MOMEVE01", tableauDeBord.vitesseMesuree.direction, AVANT);
+    verifieEgalite("MOMEVE02", tableauDeBord.vitesseMesuree.magnitude, 3);
+    verifieEgalite("MOMEVE03", defileMessageInterne()->evenement, VITESSE_MESUREE);
+    verifieEgalite("MOMEVE04", defileMessageInterne()->evenement, 0);
 }
-unsigned char test_moteurTensionMoyenneEtChangementDePhase() {
-    unsigned char testsEnErreur = 0;
-
+void test_moteurTensionMoyenneEtChangementDePhase() {
     EvenementEtValeur ev = {AUCUN_EVENEMENT, 0};
     
     // Changement de tension moyenne:
@@ -397,34 +372,28 @@ unsigned char test_moteurTensionMoyenneEtChangementDePhase() {
     MOTEUR_machine(&ev);
 
     // Vérifie l'état de la commutation:
-    testsEnErreur += assertEqualsChar(AH, 0, "MTMPAH");
-    testsEnErreur += assertEqualsChar(AL, 0, "MTMPAL");
-    testsEnErreur += assertEqualsChar(BH, 0, "MTMPBH");
-    testsEnErreur += assertEqualsChar(BL, 1, "MTMPBL");
-    testsEnErreur += assertEqualsChar(CH, P, "MTMPCH");
-    testsEnErreur += assertEqualsChar(CL, 0, "MTMPCL");
-    
-    return testsEnErreur;
+    verifieEgalite("MTMPAH", AH, 0);
+    verifieEgalite("MTMPAL", AL, 0);
+    verifieEgalite("MTMPBH", BH, 0);
+    verifieEgalite("MTMPBL", BL, 1);
+    verifieEgalite("MTMPCH", CH, P);
+    verifieEgalite("MTMPCL", CL, 0);
 }
 
 /**
  * Point d'entrée pour les tests du moteur.
  * @return Nombre de tests en erreur.
  */
-unsigned char test_moteur() {
-    unsigned char testsEnErreur = 0;
-
-    testsEnErreur += test_phaseSelonHall();
-    testsEnErreur += test_mesureVitesseMarcheAvant();
-    testsEnErreur += test_mesureVitesseMarcheArriere();
-    testsEnErreur += test_mesureVitesseInversionMarche();
-    testsEnErreur += test_calculeAmplitudesMarcheArriere();
-    testsEnErreur += test_calculeAmplitudesMarcheAvant();
+void test_moteur() {
+    test_phaseSelonHall();
+    test_mesureVitesseMarcheAvant();
+    test_mesureVitesseMarcheArriere();
+    test_mesureVitesseInversionMarche();
+    test_calculeAmplitudesMarcheArriere();
+    test_calculeAmplitudesMarcheAvant();
     
-    testsEnErreur += test_moteurMesureVitesse();
-    testsEnErreur += test_moteurTensionMoyenneEtChangementDePhase();
-
-    return testsEnErreur;
+    test_moteurMesureVitesse();
+    test_moteurTensionMoyenneEtChangementDePhase();
 }
 
 #endif

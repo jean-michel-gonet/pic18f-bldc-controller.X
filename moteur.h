@@ -1,5 +1,5 @@
 #include "domaine.h"
-#include "file.h"
+#include "evenements.h"
 
 #ifndef __MOTEUR_H
 #define __MOTEUR_H
@@ -11,11 +11,8 @@
 void MOTEUR_machine(EvenementEtValeur *ev);
 
 #ifdef TEST
-/**
- * Point d'entrée pour les tests du moteur.
- * @return Nombre de tests en erreur.
- */
-unsigned char test_moteur();
+/** Point d'entrée pour les tests du moteur. */
+void test_moteur();
 #endif
 
 #endif

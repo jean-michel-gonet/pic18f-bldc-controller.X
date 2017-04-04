@@ -19,7 +19,7 @@ void putch(char data) {
  * Configuration de la EUSART comme sortie asynchrone à 1200 bauds.
  * On assume que le PIC18 fonctionne à Fosc = 1MHz.
  */
-void EUSART_Initialize()
+void initialiseUART1()
 {
     // Pour que la EUSART marche correctement il
     // faut désactiver les convertisseurs A/D.
@@ -42,20 +42,35 @@ void EUSART_Initialize()
     TXSTA1bits.TXEN = 1;  // Active l'émetteur.
 }
 
+/** Nombre de tests en erreur depuis l'initialisation des tests. */
+static int testsEnErreur = 0;
+
+/** Nombre de tests en succès depuis l'initialisation des tests. */
+static int testsSucces = 0;
+
+/** Initialise les tests.*/
+void initialiseTests() {
+    initialiseUART1();
+    testsEnErreur = 0;
+    printf("\r\nLancement des tests...\r\n");
+}
 
 /**
  * Vérifie si <param>value</param> et <param>expectedValue</param> sont
  * identiques. Si elles ne le sont pas, affiche le test en erreur.
- * @param value Valeur obtenue.
- * @param expectedValue Valeur attendue.
+ * @param valeurObtenue Valeur obtenue.
+ * @param valeurAttendue Valeur attendue.
  * @param testId Identifiant du test.
  */
-unsigned char assertEqualsInt(int value, int expectedValue, const char *testId) {
+unsigned char verifieEgalite(const char *testId, int valeurObtenue, int valeurAttendue) {
 
-    if (value != expectedValue) {
+    if (valeurObtenue != valeurAttendue) {
         printf("Test %s: attendu [%d], mais [%d]\r\n",
-                testId, expectedValue, value);
+                testId, valeurAttendue, valeurObtenue);
+        testsEnErreur ++;
         return 1;
+    } else {
+        testsSucces ++;
     }
     return 0;
 }
@@ -68,45 +83,41 @@ unsigned char assertEqualsInt(int value, int expectedValue, const char *testId) 
  * @param max La valeur obtenue ne doit pas être supérieure a max.
  * @param testId Identifiant du test.
  */
-unsigned char assertMinMaxInt(int value, int min, int max, const char *testId) {
+unsigned char verifieIntervale(const char *testId, int value, int min, int max) {
 
     if ( (value < min) || (value > max) ) {
         printf("Test %s: attendu entre [%d] et [%d], mais [%d]\r\n",
                 testId, min, max, value);
+        testsEnErreur ++;
         return 1;
-    }
-    return 0;
-}
-
-
-/**
- * Vérifie si <param>value</param et <param>expectedValue</param> sont
- * identiques. Si elles ne le sont pas, affiche le test en erreur.
- * @param value Valeur obtenue.
- * @param expectedValue Valeur attendue.
- * @param testId Identifiant du test.
- */
-unsigned char assertEqualsChar(char value, char expectedValue, const char *testId) {
-    if (value != expectedValue) {
-        printf("Test %s: attendu [%d], mais [%d]\r\n",
-                testId, expectedValue, value);
-        return 1;
+    } else {
+        testsSucces ++;
     }
     return 0;
 }
 
 /**
  * Vérifie si <param>value</param> zéro.
- * @param value Valeur obtenue.
+ * @param valeurObtenue Valeur obtenue.
  * @param testId Identifiant du test.
  */
-unsigned char assertNotZeroChar(char value, const char *testId) {
-    if (value == 0) {
+unsigned char verifieNonZero(const char *testId, char valeurObtenue) {
+    if (valeurObtenue == 0) {
         printf("Test %s: attendu [0], mais [%d]\r\n",
-                testId, value);
+                testId, valeurObtenue);
+        testsEnErreur ++;
         return 1;
+    } else {
+        testsSucces ++;
     }
     return 0;
+}
+/**
+ * Finalise les tests.
+ */
+void finaliseTests() {
+    printf("%d tests en succes\r\n", testsSucces);
+    printf("%d tests en erreur\r\n", testsEnErreur);
 }
 
 #endif

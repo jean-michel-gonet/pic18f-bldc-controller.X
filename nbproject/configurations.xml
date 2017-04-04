@@ -6,12 +6,14 @@
                    projectFiles="true">
       <itemPath>direction.h</itemPath>
       <itemPath>domaine.h</itemPath>
-      <itemPath>file.h</itemPath>
       <itemPath>moteur.h</itemPath>
       <itemPath>puissance.h</itemPath>
       <itemPath>tableauDeBord.h</itemPath>
       <itemPath>test.h</itemPath>
       <itemPath>capture.h</itemPath>
+      <itemPath>i2c.h</itemPath>
+      <itemPath>evenements.h</itemPath>
+      <itemPath>file.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -22,13 +24,15 @@
                    projectFiles="true">
       <itemPath>direction.c</itemPath>
       <itemPath>domaine.c</itemPath>
-      <itemPath>file.c</itemPath>
       <itemPath>main.c</itemPath>
       <itemPath>moteur.c</itemPath>
       <itemPath>puissance.c</itemPath>
       <itemPath>tableauDeBord.c</itemPath>
       <itemPath>test.c</itemPath>
       <itemPath>capture.c</itemPath>
+      <itemPath>i2c.c</itemPath>
+      <itemPath>evenements.c</itemPath>
+      <itemPath>file.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"

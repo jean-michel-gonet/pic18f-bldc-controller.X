@@ -14,50 +14,39 @@
  * Configuration de la EUSART comme sortie asynchrone à 1200 bauds.
  * On assume que le PIC18 fonctionne à Fosc = 1MHz.
  */
-void EUSART_Initialize();
+void initialiseUART1();
 
-/**
- * Affiche le code du test qui a échoué.
- * @param failedTestId L'identifiant du test qui a échoué.
- */
-void displayError(unsigned int failedTestId);
+/** Initialise les tests. */
+void initialiseTests();
 
 /**
  * Vérifie si <param>value</param et <param>expectedValue</param> sont
  * identiques. Si elles ne le sont pas, affiche le test en erreur.
- * @param value Valeur obtenue.
- * @param expectedValue Valeur attendue.
+ * @param valeurObtenue Valeur obtenue.
+ * @param valeurAttendue Valeur attendue.
  * @param testId Identifiant du test.
  */
-unsigned char assertEqualsInt(int value,
-        int expectedValue, const char *testId);
+unsigned char verifieEgalite(const char *testId, int valeurObtenue, int valeurAttendue);
 
 /**
  * Vérifie si <param>value</param> se trouve entre les deux
  * limites.
- * @param value Valeur obtenue.
+ * @param valeurObtenue Valeur obtenue.
  * @param min La valeur obtenue ne doit pas être inférieure à min.
  * @param max La valeur obtenue ne doit pas être supérieure à max.
  * @param testId Identifiant du test.
  */
-unsigned char assertMinMaxInt(int value, int min, int max, const char *testId);
-
-/**
- * Vérifie si <param>value</param et <param>expectedValue</param> sont
- * identiques. Si elles ne le sont pas, affiche le test en erreur.
- * @param value Valeur obtenue.
- * @param expectedValue Valeur attendue.
- * @param testId Identifiant du test.
- */
-unsigned char assertEqualsChar(char value, 
-        char expectedValue, const char *testId);
+unsigned char verifieIntervale(const char *testId, int valeurObtenue, int min, int max);
 
 /**
  * Vérifie si <param>value</param n'est pas zéro.
- * @param value Valeur obtenue.
+ * @param valueObtenue Valeur obtenue.
  * @param testId Identifiant du test.
  */
-unsigned char assertNotZeroChar(char value, const char *testId);
+unsigned char verifieNonZero(const char *testId, char valeurObtenue);
+
+/** Finalise les tests. */
+void finaliseTests();
 
 #endif
 #endif	/* TEST_H */

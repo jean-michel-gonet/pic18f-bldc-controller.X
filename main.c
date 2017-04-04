@@ -11,6 +11,7 @@
 #include "test.h"
 #include "domaine.h"
 #include "file.h"
+#include "evenements.h"
 #include "tableauDeBord.h"
 #include "puissance.h"
 #include "moteur.h"
@@ -296,13 +297,10 @@ void main() {
  * Point d'entrée pour les tests unitaires.
  */
 void main() {
-    unsigned char ft = 0;
 
-    // Initialise la EUSART pour pouvoir écrire dans la console
-    // Activez la UART1 dans les propriétés du projet.
-    EUSART_Initialize();
-    printf("Lancement des tests...\r\n");
-    
+    // Réalise les tests
+    initialiseTests();
+
     // Configure tous les ports comme entrées:
     TRISA = 0xFF;
     TRISB = 0xFF;
@@ -310,17 +308,17 @@ void main() {
     ANSELA = 0x00;
     ANSELB = 0x00;
     ANSELC = 0x00;
+    
+    test_tableauDeBord();
+    test_evenements();
+    test_puissance();
+    test_moteur();
+    test_direction();
+    test_capture();
+    test_file();
 
-    // Exécution des tests:
-    ft += test_tableauDeBord();
-    ft += test_file();
-    ft += test_puissance();
-    ft += test_moteur();
-    ft += test_direction();
-    ft += test_capture();
-
-    // Affiche le résultat des tests:
-    printf("%u tests en erreur\r\n",ft);
+    finaliseTests();
+    
     SLEEP();
 }
 #endif

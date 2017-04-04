@@ -63,7 +63,7 @@ EvenementEtValeur *defileMessageInterne();
 void reinitialiseMessagesInternes();
 
 #ifdef TEST
-unsigned char test_tableauDeBord();
+void test_tableauDeBord();
 #endif
 
 #endif

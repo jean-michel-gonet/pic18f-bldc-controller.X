@@ -7,7 +7,7 @@
 #define TENSION_ALIMENTATION_MIN 7.4
 #define LECTURE_ALIMENTATION_MIN (unsigned char) (255 * (TENSION_ALIMENTATION_MIN / 2) / 5)
 
-#define NO_PID
+#undef NO_PID
 
 /** 
  * La tension moyenne maximum peut varier si la tension d'alimentation
@@ -174,7 +174,9 @@ void PUISSANCE_machine(EvenementEtValeur *ev) {
     switch(ev->evenement) {
         case LECTURE_ALIMENTATION:
             if (ev->valeur < LECTURE_ALIMENTATION_MIN) {
-                tensionMoyenneMax -= 32;
+                if (tensionMoyenneMax > TENSION_MOYENNE_MAX_REDUITE) {
+                    tensionMoyenneMax -= 32;
+                }
             } else {
                 if (tensionMoyenneMax < TENSION_MOYENNE_MAX) {
                     tensionMoyenneMax += 32;
@@ -195,31 +197,27 @@ void PUISSANCE_machine(EvenementEtValeur *ev) {
 }
 
 #ifdef TEST
-unsigned char test_evalueVitesseDemandee() {
-    unsigned char testsEnErreur = 0;
+void test_evalueVitesseDemandee() {
     MagnitudeEtDirection vitesseDemandee;
     
     evalueVitesseDemandee(128 + 30, &vitesseDemandee);
-    testsEnErreur += assertEqualsChar(vitesseDemandee.direction, AVANT, "PEV01");
-    testsEnErreur += assertEqualsChar(vitesseDemandee.magnitude, 60, "PEV02");
+    verifieEgalite("PEV01", vitesseDemandee.direction, AVANT);
+    verifieEgalite("PEV02", vitesseDemandee.magnitude, 60);
 
     evalueVitesseDemandee(128 - 30, &vitesseDemandee);
-    testsEnErreur += assertEqualsChar(vitesseDemandee.direction, ARRIERE, "PEV11");
-    testsEnErreur += assertEqualsChar(vitesseDemandee.magnitude, 60, "PEV12");
+    verifieEgalite("PEV11", vitesseDemandee.direction, ARRIERE);
+    verifieEgalite("PEV12", vitesseDemandee.magnitude, 60);
 
     evalueVitesseDemandee(0, &vitesseDemandee);
-    testsEnErreur += assertEqualsChar(vitesseDemandee.direction, ARRIERE, "PEV21");
-    testsEnErreur += assertEqualsChar(vitesseDemandee.magnitude, 255, "PEV22");
+    verifieEgalite("PEV21", vitesseDemandee.direction, ARRIERE);
+    verifieEgalite("PEV22", vitesseDemandee.magnitude, 255);
 
     evalueVitesseDemandee(255, &vitesseDemandee);
-    testsEnErreur += assertEqualsChar(vitesseDemandee.direction, AVANT, "PEV21");
-    testsEnErreur += assertEqualsChar(vitesseDemandee.magnitude, 255, "PEV22");
-
-    return testsEnErreur;
+    verifieEgalite("PEV21", vitesseDemandee.direction, AVANT);
+    verifieEgalite("PEV22", vitesseDemandee.magnitude, 255);
 }
-unsigned char test_limiteTensionMoyenneMax() {
-    unsigned char n;
-    unsigned char testsEnErreur = 0;
+void test_limiteTensionMoyenneMax() {
+    int n;
     EvenementEtValeur evenementEtValeur;
 
     reinitialisePid();
@@ -229,7 +227,7 @@ unsigned char test_limiteTensionMoyenneMax() {
     evenementEtValeur.valeur = 80;
     PUISSANCE_machine(&evenementEtValeur);    
 
-    for (n = 0; n < 100; n++) {
+    for (n = 0; n < 1000; n++) {
         // Avertit que l'alimentation est trop basse:
         evenementEtValeur.valeur = LECTURE_ALIMENTATION_MIN - 1;
         evenementEtValeur.evenement = LECTURE_ALIMENTATION;
@@ -242,12 +240,9 @@ unsigned char test_limiteTensionMoyenneMax() {
     }
 
     // La tension moyenne de sortie est à zéro:
-    assertEqualsInt(tableauDeBord.tensionMoyenne.magnitude, 0, "PMAX01");
-    
-    return testsEnErreur;
+    verifieEgalite("PMAX01", tableauDeBord.tensionMoyenne.magnitude, TENSION_MOYENNE_MAX_REDUITE/32);
 }
-unsigned char test_soustraitDesMagnitudesEtDirection() {
-    unsigned char testsEnErreur = 0;
+void test_soustraitDesMagnitudesEtDirection() {
     MagnitudeEtDirection a,b;
 
     // Signes opposés:
@@ -256,13 +251,13 @@ unsigned char test_soustraitDesMagnitudesEtDirection() {
     
     a.magnitude = 100;
     b.magnitude = 50;
-    testsEnErreur += assertEqualsInt(soustraitAmoinsB(&a, &b),  150, "SO01p");
-    testsEnErreur += assertEqualsInt(soustraitAmoinsB(&b, &a), -150, "SO01n");
+    verifieEgalite("SO01p", soustraitAmoinsB(&a, &b),  150);
+    verifieEgalite("SO01n", soustraitAmoinsB(&b, &a), -150);
     
     a.magnitude = 50;
     b.magnitude = 100;
-    testsEnErreur += assertEqualsInt(soustraitAmoinsB(&a, &b),  150, "SO02p");
-    testsEnErreur += assertEqualsInt(soustraitAmoinsB(&b, &a), -150, "SO02n");
+    verifieEgalite("SO02p", soustraitAmoinsB(&a, &b),  150);
+    verifieEgalite("SO02n", soustraitAmoinsB(&b, &a), -150);
 
     // Signes identiques:
     a.direction = ARRIERE;
@@ -270,10 +265,8 @@ unsigned char test_soustraitDesMagnitudesEtDirection() {
     
     a.magnitude = 100;
     b.magnitude = 50;
-    testsEnErreur += assertEqualsInt(soustraitAmoinsB(&a, &b), -50, "SO03p");
-    testsEnErreur += assertEqualsInt(soustraitAmoinsB(&b, &a),  50, "SO03n");
-    
-    return testsEnErreur;
+    verifieEgalite("SO03p", soustraitAmoinsB(&a, &b), -50);
+    verifieEgalite("SO03n", soustraitAmoinsB(&b, &a),  50);
 }
 void convertitEntierEnMagnitudeEtDirection(int v, unsigned char n, MagnitudeEtDirection *md) {
     int magnitude;
@@ -300,16 +293,15 @@ void modelePhysique(MagnitudeEtDirection *vitesseMesuree, MagnitudeEtDirection *
         }
     }    
 }
-unsigned char test_pidAtteintLaVitesseDemandee() {
+void test_pidAtteintLaVitesseDemandee() {
     MagnitudeEtDirection vitesseMesuree = {AVANT, 0};
     MagnitudeEtDirection vitesseDemandee = {AVANT, 100};
     
     reinitialisePid();
     modelePhysique(&vitesseMesuree, &vitesseDemandee);
-    return assertEqualsInt(vitesseMesuree.magnitude, 100, "PID001");
+    verifieEgalite("PID001", vitesseMesuree.magnitude, 100);
 }
-unsigned char test_pidRepositionneLaVoitureAPointDeDepart() {
-    unsigned char testsEnErreur = 0;
+void test_pidRepositionneLaVoitureAPointDeDepart() {
     MagnitudeEtDirection vitesseDemandee = {AVANT, 0};
     MagnitudeEtDirection vitesseMesuree = {AVANT, 0};
     
@@ -318,24 +310,19 @@ unsigned char test_pidRepositionneLaVoitureAPointDeDepart() {
 
     modelePhysique(&vitesseMesuree, &vitesseDemandee);
 
-    testsEnErreur += assertEqualsInt(erreurI, 0, "PIDP1");
-    testsEnErreur += assertEqualsInt(vitesseMesuree.magnitude, 0, "PID001");
-    return testsEnErreur;
+    verifieEgalite("PIDP1", erreurI, 0);
+    verifieEgalite("PID001", vitesseMesuree.magnitude, 0);
 }
 
 /**
  * Tests unitaires pour le calcul de tension.
  * @return Nombre de tests en erreur.
  */
-unsigned char test_puissance() {
-    unsigned char testsEnErreur = 0;
-    
-    testsEnErreur += test_soustraitDesMagnitudesEtDirection();
-    testsEnErreur += test_pidRepositionneLaVoitureAPointDeDepart();
-    testsEnErreur += test_pidAtteintLaVitesseDemandee();
-    testsEnErreur += test_evalueVitesseDemandee();
-    testsEnErreur += test_limiteTensionMoyenneMax();
-    
-    return testsEnErreur;
+void test_puissance() {
+    test_soustraitDesMagnitudesEtDirection();
+    test_pidRepositionneLaVoitureAPointDeDepart();
+    test_pidAtteintLaVitesseDemandee();
+    test_evalueVitesseDemandee();
+    test_limiteTensionMoyenneMax();
 }
 #endif

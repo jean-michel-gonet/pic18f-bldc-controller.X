@@ -1,28 +1,19 @@
 #include "domaine.h"
+#include "file.h"
 #include "tableauDeBord.h"
+#include "test.h"
 
 /**
  * Espace mémoire pour la file.
  */
-static EvenementEtValeur messagesInternesFile[8];
-
-/** Curseur d'entrée de la file. */
-static unsigned char messagesInternesFileEntree = 0;
-
-/** Curseur de sortie de la file. */
-static unsigned char messagesInternesFileSortie = 0;
-
-/** Si différent de zéro, alors la file a débordé. */
-static unsigned char messagesInternesFileDeborde = 0;
+static File fileMessagesInternes;
 
 /**
  * Réinitialise la file des messages internes.
  * Utilisée pour les tests unitaires.
  */
 void reinitialiseMessagesInternes() {
-    messagesInternesFileEntree = 0;
-    messagesInternesFileSortie = 0;
-    messagesInternesFileDeborde = 0;
+    fileReinitialise(&fileMessagesInternes);
 }
 
 /**
@@ -30,40 +21,27 @@ void reinitialiseMessagesInternes() {
  * @param evenement L'événement.
  */
 void enfileMessageInterne(Evenement evenement) {
-    struct EVENEMENT_ET_VALEUR *ev;
-
-    if (messagesInternesFileDeborde == 0) {
-        ev = &messagesInternesFile[messagesInternesFileEntree++];
-
-        messagesInternesFileEntree &= 7;
-
-        if (messagesInternesFileEntree == messagesInternesFileSortie) {
-            messagesInternesFileDeborde = 1;
-        }
-
-        ev->evenement = evenement;
-        ev->valeur = 0;
-    }
+    fileEnfile(&fileMessagesInternes, evenement);
 }
     
 EvenementEtValeur *defileMessageInterne() {
-    struct EVENEMENT_ET_VALEUR *ev;
+    static struct EVENEMENT_ET_VALEUR ev;
 
-    if (messagesInternesFileSortie == messagesInternesFileEntree) {
+    if (fileEstVide(&fileMessagesInternes)) {
         return 0;
     }
-    ev = &messagesInternesFile[messagesInternesFileSortie ++];
-    messagesInternesFileSortie &= 7;
     
-    return ev;
+    ev.evenement = fileDefile(&fileMessagesInternes);
+    ev.valeur = 0;
+    
+    return &ev;
 }
 
 #ifdef TEST
 
 #include "test.h"
 
-unsigned char test_enfileEtDefileUnMessageInterne() {
-    unsigned char testsEnErreur = 0;
+void test_enfileEtDefileUnMessageInterne() {
     EvenementEtValeur *evenementEtValeur;
 
     reinitialiseMessagesInternes();
@@ -71,16 +49,13 @@ unsigned char test_enfileEtDefileUnMessageInterne() {
     // Enfile et défile un événement:
     enfileMessageInterne(LECTURE_COURANT);
     evenementEtValeur = defileMessageInterne();
-    testsEnErreur += assertEqualsChar(evenementEtValeur->evenement, LECTURE_COURANT, "TDB-01");
+    verifieEgalite("TDB-01", evenementEtValeur->evenement, LECTURE_COURANT);
     
     // Comme la pile est vide, il n'y a plus de messages:
-    testsEnErreur += assertEqualsInt((int) defileMessageInterne(), 0, "TDB-02");
-    
-    return testsEnErreur;
+    verifieEgalite("TDB-02", (int) defileMessageInterne(), 0);
 }
 
-unsigned char test_enfileEtDefileDeuxMessagesInternes() {
-    unsigned char testsEnErreur = 0;
+void test_enfileEtDefileDeuxMessagesInternes() {
     EvenementEtValeur *evenementEtValeur;
 
     reinitialiseMessagesInternes();
@@ -90,19 +65,16 @@ unsigned char test_enfileEtDefileDeuxMessagesInternes() {
     enfileMessageInterne(LECTURE_TEMPERATURE);
     
     evenementEtValeur = defileMessageInterne();
-    testsEnErreur += assertEqualsChar(evenementEtValeur->evenement, LECTURE_COURANT, "TDB2-01");
+    verifieEgalite("TDB2-01", evenementEtValeur->evenement, LECTURE_COURANT);
     
     evenementEtValeur = defileMessageInterne();
-    testsEnErreur += assertEqualsChar(evenementEtValeur->evenement, LECTURE_TEMPERATURE, "TDB2-02");
+    verifieEgalite("TDB2-02", evenementEtValeur->evenement, LECTURE_TEMPERATURE);
     
-    // Comme la pile est vide, il n'y a plus de messages:
-    testsEnErreur += assertEqualsInt((int) defileMessageInterne(), 0, "TDB2-03");
-    
-    return testsEnErreur;    
+    // Comme la file est vide, il n'y a plus de messages:
+    verifieEgalite("TDB2-03", (int) defileMessageInterne(), 0);
 }
 
-unsigned char test_enfileEtDefileUnBonPaquetDeMessages() {
-    unsigned char testsEnErreur = 0;
+void test_enfileEtDefileUnBonPaquetDeMessages() {
     EvenementEtValeur *evenementEtValeur;
     unsigned char n;
 
@@ -115,53 +87,19 @@ unsigned char test_enfileEtDefileUnBonPaquetDeMessages() {
         
         // Défile les événements:
         evenementEtValeur = defileMessageInterne();
-        testsEnErreur += assertEqualsChar(evenementEtValeur->evenement, LECTURE_COURANT, "TDBP-01");
+        verifieEgalite("TDBP-01", evenementEtValeur->evenement, LECTURE_COURANT);
         evenementEtValeur = defileMessageInterne();
-        testsEnErreur += assertEqualsChar(evenementEtValeur->evenement, LECTURE_TEMPERATURE, "TDBP-02");
+        verifieEgalite("TDBP-02", evenementEtValeur->evenement, LECTURE_TEMPERATURE);
         
         // Comme la pile est vide, il n'y a plus de messages:
-        testsEnErreur += assertEqualsInt((int) defileMessageInterne(), 0, "TDBP-03");
-        
-        if (testsEnErreur > 0) {
-            break;
-        }
-    }
-    
-    return testsEnErreur;    
-    
+        verifieEgalite("TDBP-03", (int) defileMessageInterne(), 0);
+    }   
 }
 
-unsigned char test_laFileDeborde() {
-    unsigned char testsEnErreur = 0;
-
-    reinitialiseMessagesInternes();
-    
-    enfileMessageInterne(LECTURE_COURANT);
-    enfileMessageInterne(LECTURE_COURANT);
-    enfileMessageInterne(LECTURE_COURANT);
-    enfileMessageInterne(LECTURE_COURANT);
-    enfileMessageInterne(LECTURE_COURANT);
-    enfileMessageInterne(LECTURE_COURANT);
-    
-    enfileMessageInterne(LECTURE_COURANT);
-    testsEnErreur += assertEqualsChar(messagesInternesFileDeborde, 0, "TDBD-01");
-    
-    enfileMessageInterne(LECTURE_COURANT);
-    testsEnErreur += assertEqualsChar(messagesInternesFileDeborde, 1, "TDBD-01");
-    
-    return testsEnErreur;        
-}
-
-
-unsigned char test_tableauDeBord() {
-    unsigned char testsEnErreur = 0;
-    
-    testsEnErreur += test_enfileEtDefileUnMessageInterne();
-    testsEnErreur += test_enfileEtDefileDeuxMessagesInternes();
-    testsEnErreur += test_enfileEtDefileUnBonPaquetDeMessages();
-    testsEnErreur += test_laFileDeborde();
-    
-    return testsEnErreur;
+void test_tableauDeBord() {
+    test_enfileEtDefileUnMessageInterne();
+    test_enfileEtDefileDeuxMessagesInternes();
+    test_enfileEtDefileUnBonPaquetDeMessages();
 }
 
 #endif

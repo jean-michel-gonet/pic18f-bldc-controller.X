@@ -22,20 +22,20 @@ void DIRECTION_machine(EvenementEtValeur *ev) {
 }
 
 #ifdef TEST
-unsigned test_calculePwmServoRouesAvant() {
+unsigned calcule_pwm_servo_roues_avant() {
     unsigned char testsEnErreur = 0;
     
     calculePwmServoRouesAvant(128);
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 3024, "DIR01");
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 3024, "DIR01a");
+    verifieEgalite("DIR01", tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 3024);
+    verifieEgalite("DIR01a", tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 3024);
 
     calculePwmServoRouesAvant(0);
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 2000, "DIR11");
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 2000, "DIR11a");
+    verifieEgalite("DIR11", tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 2000);
+    verifieEgalite("DIR11a", tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 2000);
 
     calculePwmServoRouesAvant(255);
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 4040, "DIR21");
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 4040, "DIR21a");
+    verifieEgalite("DIR21", tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 4040);
+    verifieEgalite("DIR21a", tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 4040);
 
     return testsEnErreur;
 }
@@ -45,8 +45,8 @@ unsigned test_directionMachine() {
     EvenementEtValeur ev = {LECTURE_RC_GAUCHE_DROITE, 0};
 
     DIRECTION_machine(&ev);
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 2000, "DIRM11");
-    assertEqualsInt(tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 2000, "DIRM11a");
+    verifieEgalite("DIRM11", tableauDeBord.positionRouesAvant.tempsBas.valeur, 65535 - 40000 + 2000);
+    verifieEgalite("DIRM11a", tableauDeBord.positionRouesAvant.tempsHaut.valeur, 65535 - 2000);
 
     return testsEnErreur;
 }
@@ -55,14 +55,9 @@ unsigned test_directionMachine() {
 
 /**
  * Tests unitaires pour le positionnement des roues de direction.
- * @return Nombre de tests en erreur.
  */
-unsigned char test_direction() {
-    unsigned char testsEnErreur = 0;
-    
-    testsEnErreur += test_calculePwmServoRouesAvant();
-    testsEnErreur += test_directionMachine();
-    
-    return testsEnErreur;
+void test_direction() {
+    calcule_pwm_servo_roues_avant();
+    test_directionMachine();
 }
 #endif

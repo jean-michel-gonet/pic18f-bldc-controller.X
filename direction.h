@@ -8,7 +8,7 @@
 void DIRECTION_machine(EvenementEtValeur *ev);
 
 #ifdef TEST
-unsigned char test_direction();
+void test_direction();
 #endif
 
 #endif

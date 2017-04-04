@@ -11,11 +11,8 @@
 void PUISSANCE_machine(EvenementEtValeur *ev);
 
 #ifdef TEST
-/**
- * Tests unitaires pour le calcul de puissance.
- * @return Nombre de tests en erreur.
- */
-unsigned char test_puissance();
+/** Tests unitaires pour le calcul de puissance. */
+void test_puissance();
 #endif
 
 #endif
