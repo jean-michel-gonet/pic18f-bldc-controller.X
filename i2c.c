@@ -140,9 +140,6 @@ unsigned char convertitEnAdresseLocale(unsigned char adresse) {
     return adresse;
 }
 
-/** Liste des valeurs exposées par l'esclave I2C. */
-unsigned char i2cValeursExposees[I2C_MASQUE_ADRESSES_LOCALES + 1];
-
 /**
  * L'esclave rendra la valeur indiquée à prochaine lecture de 
  * l'adresse indiquée sur le bus I2C.

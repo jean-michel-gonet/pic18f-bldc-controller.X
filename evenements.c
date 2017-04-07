@@ -11,7 +11,7 @@ static File fileEvenementEtValeur;
 /**
  * Initialise la file d'événements.
  */
-void evenementsInitialise() {
+void initaliseEvenements() {
     fileReinitialise(&fileEvenementEtValeur);
 }
 
@@ -59,7 +59,7 @@ void test_evenements() {
     struct EVENEMENT_ET_VALEUR *ev1;
     unsigned char n;
 
-    evenementsInitialise();
+    initaliseEvenements();
 
     // Test A: file vide, puis ajout de 1 élément:
     verifieEgalite("Q-A-01", (int) defileEvenement(), 0);

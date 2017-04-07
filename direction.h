@@ -7,6 +7,11 @@
  */
 void DIRECTION_machine(EvenementEtValeur *ev);
 
+void receptionBus(unsigned char address, unsigned char valeur);
+void receptionTelecommandeAvantArriere(unsigned char valeur);
+void receptionTelecommandeGaucheDroite(unsigned char valeur);
+
+
 #ifdef TEST
 void test_direction();
 #endif

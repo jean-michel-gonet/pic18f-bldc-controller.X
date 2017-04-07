@@ -15,6 +15,9 @@ typedef struct {
     unsigned char valeur;
 } I2cCommande;
 
+/** Liste des valeurs exposées par l'esclave I2C. */
+unsigned char i2cValeursExposees[I2C_MASQUE_ADRESSES_LOCALES + 1];
+
 typedef void (*I2cRappelCommande)(unsigned char, unsigned char);
 void i2cRappelCommande(I2cRappelCommande r);
 void i2cExposeValeur(unsigned char adresse, unsigned char valeur);

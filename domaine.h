@@ -41,10 +41,10 @@ typedef enum EVENEMENT {
     /** Lecture de la température du moteur. */
     LECTURE_TEMPERATURE,
     
-    /** Lecture de l'entrée Avant/Arrière de la radiocommande. */
+    /** Lecture de l'entrée Avant/Arrière de la télécommande. */
     LECTURE_RC_AVANT_ARRIERE,
     
-    /** Lecture de l'entrée Gauche/Droite de la radiocommande. */
+    /** Lecture de l'entrée Gauche/Droite de la télécommande. */
     LECTURE_RC_GAUCHE_DROITE,
     
     /** La vitesse demandée pour le moteur a été spécifiée / modifiée. */

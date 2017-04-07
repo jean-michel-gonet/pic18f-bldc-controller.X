@@ -17,6 +17,7 @@
 #include "moteur.h"
 #include "direction.h"
 #include "capture.h"
+#include "i2c.h"
 
 /**
  * Bits de configuration:
@@ -124,7 +125,7 @@ void low_priority interrupt interruptionsBassePriorite() {
                 break;
             case CAPTURE_FLANC_DESCENDANT:
                 mesureRc = captureFlancDescendant(CANAL_RC_DIRECTION, CCPR4);
-                enfileEvenement(LECTURE_RC_GAUCHE_DROITE, mesureRc);
+                receptionTelecommandeGaucheDroite(mesureRc);
                 CCP4CONbits.CCP4M = CAPTURE_FLANC_MONTANT;
                 break;
         }
@@ -140,7 +141,7 @@ void low_priority interrupt interruptionsBassePriorite() {
                 break;
             case CAPTURE_FLANC_DESCENDANT:
                 mesureRc = captureFlancDescendant(CANAL_RC_VITESSE, CCPR5);
-                enfileEvenement(LECTURE_RC_AVANT_ARRIERE, mesureRc);
+                receptionTelecommandeAvantArriere(mesureRc);
                 CCP5CONbits.CCP5M = CAPTURE_FLANC_MONTANT;
                 break;
         }
@@ -163,22 +164,17 @@ void low_priority interrupt interruptionsBassePriorite() {
             hall0 = hall;
         }
     }
+    
+    // Interruptions I2C
+    if (PIR3bits.SSP2IF) {
+        i2cEsclave();
+    }
 }
 
 /**
- * Point d'entrée.
- * Active les PWM 1 à 3, en mode Demi-pont, pour produire un PWM
- * à 62KHz, avec une précision de 1024 pas.
+ * Initialise le hardware.
  */
-void main() {
-    struct EVENEMENT_ET_VALEUR *ev;
-
-    // Configure tous les ports comme entrées:
-    TRISA = 0xFF;
-    TRISB = 0xFF;
-    TRISC = 0xFF;
-
-    
+void hardwareInitialise() {
     // Configure le micro contrôleur pour 64MHz:
     OSCCONbits.IRCF = 7;    // Fréquence de base: 16 MHz
     OSCTUNEbits.PLLEN = 1;  // Active le PLL.
@@ -255,6 +251,21 @@ void main() {
     PIE4bits.CCP5IE = 1;            // Active les interruptions.
     IPR4bits.CCP5IP = 0;            // Basse priorité.
     
+    // Active le MSSP2 en mode Esclave I2C:
+    SSP2CON1bits.SSPEN = 1;             // Active le module SSP.    
+    
+    SSP2ADD = LECTURE_ALIMENTATION;     // 1ère Adresse de l'esclave.
+    SSP2MSK = I2C_MASQUE_ADRESSES_ESCLAVES;
+    SSP2CON1bits.SSPM = 0b1110;         // SSP1 en mode esclave I2C avec adresse de 7 bits et interruptions STOP et START.
+        
+    SSP2CON3bits.PCIE = 0;              // Désactive l'interruption en cas STOP.
+    SSP2CON3bits.SCIE = 0;              // Désactive l'interruption en cas de START.
+    SSP2CON3bits.SBCDE = 0;             // Désactive l'interruption en cas de collision.
+    SSP2CON3bits.BOEN = 1;              // 
+
+    PIE3bits.SSP2IE = 1;                // Interruption en cas de transmission I2C...
+    IPR3bits.SSP2IP = 0;                // ... de basse priorité.
+
     // Active les interruptions en général:
     RCONbits.IPEN = 1;
     INTCONbits.GIEH = 1;
@@ -265,8 +276,28 @@ void main() {
     PORTB = 0;
     PORTC = 0;
     TRISA = 0b10111111;  // RA6 est une sortie.
-    TRISB = 0b00111111;  // Entrées analogiques du port B.
-    TRISC = 0x00;        // Tous les bits du port C comme sorties.
+    TRISB = 0b11111111;  // I2C + Entrées analogiques du port B.
+    TRISC = 0b00000000;  // Tous les bits du port C comme sorties.
+}
+
+/**
+ * Point d'entrée.
+ * Active les PWM 1 à 3, en mode Demi-pont, pour produire un PWM
+ * à 62KHz, avec une précision de 1024 pas.
+ */
+void main() {
+    struct EVENEMENT_ET_VALEUR *ev;
+
+    // Configure tous les ports comme entrées:
+    TRISA = 0xFF;
+    TRISB = 0xFF;
+    TRISC = 0xFF;
+
+    // Initialise le hardware:
+    hardwareInitialise();
+    
+    // Configure la réception de commandes i2c:
+    i2cRappelCommande(receptionBus);
 
     // Surveille la file d'événements, et les traite au fur
     // et à mesure:
