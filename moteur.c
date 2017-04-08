@@ -338,7 +338,7 @@ void test_calculeAmplitudesMarcheAvant() {
 void test_moteurMesureVitesse() {
     EvenementEtValeur ev = {AUCUN_EVENEMENT, 0};
     
-    reinitialiseMessagesInternes();
+    initialiseMessagesInternes();
     
     ev.evenement = MOTEUR_PHASE;
     

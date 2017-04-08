@@ -99,16 +99,16 @@ void low_priority interrupt interruptionsBassePriorite() {
 
         if (!ADCON0bits.GODONE) {
             switch (ADCON0bits.CHS) {
-                case 8:
+                case 9:
                     enfileEvenement(LECTURE_POTENTIOMETRE, ADRESH);
                     ADCON0bits.CHS = 11;
                     break;
                 case 11:
                     enfileEvenement(LECTURE_ALIMENTATION, ADRESH);
-                    ADCON0bits.CHS = 8;
+                    ADCON0bits.CHS = 9;
                     break;
                 default:
-                    ADCON0bits.CHS = 8;
+                    ADCON0bits.CHS = 9;
                     break;
             }
             ADCON0bits.GODONE = 1;
@@ -168,6 +168,7 @@ void low_priority interrupt interruptionsBassePriorite() {
     // Interruptions I2C
     if (PIR3bits.SSP2IF) {
         i2cEsclave();
+        PIR3bits.SSP2IF = 0;
     }
 }
 
@@ -181,7 +182,7 @@ void hardwareInitialise() {
 
     // Configure le module A/D:
     ANSELA = 0x00;       // Désactive les convertisseurs A/D
-    ANSELB = 0b00100100; // Active AN8(RB2) et AN13(RB5) comme entrées analogiques.
+    ANSELB = 0b00101000; // Active AN9(RB3) et AN13(RB5) comme entrées analogiques.
     ANSELC = 0x00;       // Désactive les convertisseurs A/D.
 
     ADCON2bits.ADFM = 0; // Résultat justifié sur ADRESH.
@@ -254,9 +255,9 @@ void hardwareInitialise() {
     // Active le MSSP2 en mode Esclave I2C:
     SSP2CON1bits.SSPEN = 1;             // Active le module SSP.    
     
-    SSP2ADD = LECTURE_ALIMENTATION;     // 1ère Adresse de l'esclave.
+    SSP2ADD = LECTURE_VITESSE_RC;       // 1ère Adresse de l'esclave.
     SSP2MSK = I2C_MASQUE_ADRESSES_ESCLAVES;
-    SSP2CON1bits.SSPM = 0b1110;         // SSP1 en mode esclave I2C avec adresse de 7 bits et interruptions STOP et START.
+    SSP2CON1bits.SSPM = 0b1110;         // SSP2 en mode esclave I2C avec adresse de 7 bits et interruptions STOP et START.
         
     SSP2CON3bits.PCIE = 0;              // Désactive l'interruption en cas STOP.
     SSP2CON3bits.SCIE = 0;              // Désactive l'interruption en cas de START.
@@ -266,7 +267,7 @@ void hardwareInitialise() {
     PIE3bits.SSP2IE = 1;                // Interruption en cas de transmission I2C...
     IPR3bits.SSP2IP = 0;                // ... de basse priorité.
 
-    // Active les interruptions en général:
+    // Active les interruptions générales:
     RCONbits.IPEN = 1;
     INTCONbits.GIEH = 1;
     INTCONbits.GIEL = 1;
@@ -296,8 +297,10 @@ void main() {
     // Initialise le hardware:
     hardwareInitialise();
     
-    // Configure la réception de commandes i2c:
+    // Initialise le software:
     i2cRappelCommande(receptionBus);
+    initaliseEvenements();
+    initialiseMessagesInternes();
 
     // Surveille la file d'événements, et les traite au fur
     // et à mesure:

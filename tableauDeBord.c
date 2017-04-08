@@ -12,7 +12,7 @@ static File fileMessagesInternes;
  * Réinitialise la file des messages internes.
  * Utilisée pour les tests unitaires.
  */
-void reinitialiseMessagesInternes() {
+void initialiseMessagesInternes() {
     fileReinitialise(&fileMessagesInternes);
 }
 
@@ -44,7 +44,7 @@ EvenementEtValeur *defileMessageInterne() {
 void test_enfileEtDefileUnMessageInterne() {
     EvenementEtValeur *evenementEtValeur;
 
-    reinitialiseMessagesInternes();
+    initialiseMessagesInternes();
     
     // Enfile et défile un événement:
     enfileMessageInterne(LECTURE_COURANT);
@@ -58,7 +58,7 @@ void test_enfileEtDefileUnMessageInterne() {
 void test_enfileEtDefileDeuxMessagesInternes() {
     EvenementEtValeur *evenementEtValeur;
 
-    reinitialiseMessagesInternes();
+    initialiseMessagesInternes();
     
     // Enfile et défile un événement:
     enfileMessageInterne(LECTURE_COURANT);
@@ -78,7 +78,7 @@ void test_enfileEtDefileUnBonPaquetDeMessages() {
     EvenementEtValeur *evenementEtValeur;
     unsigned char n;
 
-    reinitialiseMessagesInternes();
+    initialiseMessagesInternes();
     
     for (n = 0; n < 100; n++) {
         // Enfile deux événements:

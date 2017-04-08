@@ -60,7 +60,7 @@ EvenementEtValeur *defileMessageInterne();
  * Réinitialise la file des messages internes.
  * Utilisée pour les tests unitaires.
  */
-void reinitialiseMessagesInternes();
+void initialiseMessagesInternes();
 
 #ifdef TEST
 void test_tableauDeBord();

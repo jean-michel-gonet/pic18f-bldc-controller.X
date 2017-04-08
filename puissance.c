@@ -7,7 +7,7 @@
 #define TENSION_ALIMENTATION_MIN 7.4
 #define LECTURE_ALIMENTATION_MIN (unsigned char) (255 * (TENSION_ALIMENTATION_MIN / 2) / 5)
 
-#undef NO_PID
+#define NO_PID
 
 /** 
  * La tension moyenne maximum peut varier si la tension d'alimentation

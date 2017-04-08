@@ -6,9 +6,9 @@
 
 /** 
  * Comptes de la base de temps jusqu'à considérer 
- * que la télécommande n'est plus active. 
+ * que la télécommande n'est plus active (environ 5 secondes). 
  */
-#define TEMPS_INACTIVITE_TELECOMMANDE 1000
+#define TEMPS_INACTIVITE_TELECOMMANDE 120
 
 /** 
  * Seuil en dessous du quel on considère que la télécommande est neutre.
@@ -30,7 +30,7 @@ BusOuTelecommande busOuTelecommande = MODE_TELECOMMANDE;
  * Nombre d'impulsions de la base de temps jusqu'à considérer
  * que la télécommande n'est plus active.
  */
-unsigned int tempsInactiviteTelecommande = TEMPS_INACTIVITE_TELECOMMANDE;
+unsigned char tempsInactiviteTelecommande = TEMPS_INACTIVITE_TELECOMMANDE;
 
 /**
  * Calcule la forme du signal PWM à produire pour positionner les roues avant
@@ -69,6 +69,20 @@ void receptionBus(unsigned char adresse, unsigned char valeur) {
 }
 
 /**
+ * Indique si la valeur lue de la télécommande est considérée comme neutre.
+ * @param valeur Valeur lue de la télécommande
+ * @return -1/255 si la valeur n'est pas neutre.
+ */
+char valeurTelecommandeEstPasNeutre(unsigned char valeur) {
+    if ((valeur >= 127 + SEUIL_NEUTRALITE_TELECOMMANDE) ||
+            (valeur <= 127 - SEUIL_NEUTRALITE_TELECOMMANDE)) {
+        return -1;
+    } else {
+        return 0;
+    }
+}
+
+/**
  * Reçoit la lecture d'un canal de la télécommande.
  * @param evenement Le canal de télécommande.
  * @param valeur La valeur lue
@@ -76,15 +90,15 @@ void receptionBus(unsigned char adresse, unsigned char valeur) {
 void receptionTelecommande(Evenement evenement, unsigned char valeur) {
     switch(busOuTelecommande) {
         case MODE_BUS_DE_COMMANDES:
-            if ((valeur >= 127 + SEUIL_NEUTRALITE_TELECOMMANDE) ||
-                    (valeur <= 127 - SEUIL_NEUTRALITE_TELECOMMANDE)) {
+            if (valeurTelecommandeEstPasNeutre(valeur)) {
                 busOuTelecommande = MODE_TELECOMMANDE;
-            } else {
-                busOuTelecommande = MODE_BUS_DE_COMMANDES;
             }
             break;
         case MODE_TELECOMMANDE:
-            tempsInactiviteTelecommande = TEMPS_INACTIVITE_TELECOMMANDE;
+            if (valeurTelecommandeEstPasNeutre(valeur)) {
+                tempsInactiviteTelecommande = TEMPS_INACTIVITE_TELECOMMANDE;
+                i2cExposeValeur(2, tempsInactiviteTelecommande);
+            }
             enfileEvenement(evenement, valeur);    
             break;
     }    
@@ -116,12 +130,14 @@ void DIRECTION_machine(EvenementEtValeur *ev) {
     if (ev->evenement == BASE_DE_TEMPS) {
         if (tempsInactiviteTelecommande > 0) {
             tempsInactiviteTelecommande--;
+            i2cExposeValeur(2, tempsInactiviteTelecommande);
             if (tempsInactiviteTelecommande == 0) {
                 busOuTelecommande = MODE_BUS_DE_COMMANDES;
             }
-        } else {
-            busOuTelecommande = MODE_TELECOMMANDE;            
         }
+    }
+    if (ev->evenement == LECTURE_RC_GAUCHE_DROITE) {
+          calculePwmServoRouesAvant(ev->valeur);
     }
 }
 
@@ -236,8 +252,10 @@ void passe_en_mode_bus_si_la_telecommande_est_longtemps_neutre() {
     EvenementEtValeur ev = {BASE_DE_TEMPS, 0};
 
 
-    busOuTelecommande = MODE_BUS_DE_COMMANDES;
+    busOuTelecommande = MODE_TELECOMMANDE;
     for (n = 0; n < TEMPS_INACTIVITE_TELECOMMANDE; n++) {
+        receptionTelecommandeGaucheDroite(127 - SEUIL_NEUTRALITE_TELECOMMANDE + 1);
+        receptionTelecommandeAvantArriere(127 + SEUIL_NEUTRALITE_TELECOMMANDE - 1);
         DIRECTION_machine(&ev);
     }
     verifieEgalite("DIR_N1", busOuTelecommande, MODE_BUS_DE_COMMANDES);

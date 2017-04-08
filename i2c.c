@@ -50,7 +50,7 @@ void i2cPrepareCommandePourEmission(I2cAdresse adresse, unsigned char valeur) {
     fileEnfile(&fileEmission, adresse);
     fileEnfile(&fileEmission, valeur);
     if (etatMaitre == I2C_MASTER_EMISSION_ADRESSE) {
-        SSP1CON2bits.SEN = 1;
+        SSP2CON2bits.SEN = 1;
     }
 }
 
@@ -92,38 +92,38 @@ void i2cMaitre() {
                 } else {
                     etatMaitre = I2C_MASTER_EMISSION_DONNEE;
                 }
-                SSP1BUF = adresse;
+                SSP2BUF = adresse;
             }
             break;
             
         case I2C_MASTER_EMISSION_DONNEE:
             etatMaitre = I2C_MASTER_EMISSION_STOP;
-            SSP1BUF = i2cRecupereCaracterePourEmission();
+            SSP2BUF = i2cRecupereCaracterePourEmission();
             break;
 
         case I2C_MASTER_PREPARE_RECEPTION_DONNEE:
             etatMaitre = I2C_MASTER_RECEPTION_DONNEE;
             i2cRecupereCaracterePourEmission();
-            SSP1CON2bits.RCEN = 1;  // MMSP en réception.
+            SSP2CON2bits.RCEN = 1;  // MMSP en réception.
             break;
             
         case I2C_MASTER_RECEPTION_DONNEE:
             etatMaitre = I2C_MASTER_EMISSION_STOP;
             // Le maître doit gérer la valeur rendue par l'esclave
-            rappelCommande(adresse, SSP1BUF);
-            SSP1CON2bits.ACKDT = 1; // NACK
-            SSP1CON2bits.ACKEN = 1; // Transmet le NACK
+            rappelCommande(adresse, SSP2BUF);
+            SSP2CON2bits.ACKDT = 1; // NACK
+            SSP2CON2bits.ACKEN = 1; // Transmet le NACK
             break;
             
         case I2C_MASTER_EMISSION_STOP:
             etatMaitre = I2C_MASTER_FIN_OPERATION;
-            SSP1CON2bits.PEN = 1;
+            SSP2CON2bits.PEN = 1;
             break;
             
         case I2C_MASTER_FIN_OPERATION:
             etatMaitre = I2C_MASTER_EMISSION_ADRESSE;
             if (i2cDonneesDisponiblesPourEmission()) {
-                SSP1CON2bits.SEN = 1;
+                SSP2CON2bits.SEN = 1;
             }
             break;
     }
@@ -161,41 +161,40 @@ void i2cEsclave() {
     static unsigned char adresse;
     
     // Machine à état extraite de Microchip AN00734b - Appendice B
-    if (SSP1STATbits.S) {
-        if (SSP1STATbits.RW) {
+    if (SSP2STATbits.S) {
+        if (SSP2STATbits.RW2) {
             // État 4 - Opération de lecture, dernier octet transmis est une donnée:
             // Jamais utilisé si les commandes ont un seul octet associé.
-            if (SSP1STATbits.DA) {
-                SSP1BUF = i2cValeursExposees[adresse];
-                SSP1CON1bits.CKP = 1;
+            if (SSP2STATbits.DA2) {
+                SSP2BUF = i2cValeursExposees[adresse];
+                SSP2CON1bits.CKP = 1;
             } 
             // État 3 - Opération de lecture, dernier octet reçu est une adresse:
             else {
-                adresse = convertitEnAdresseLocale(SSP1BUF);
-                SSP1BUF = i2cValeursExposees[adresse];
-                SSP1CON1bits.CKP = 1;
+                adresse = convertitEnAdresseLocale(SSP2BUF);
+                SSP2BUF = i2cValeursExposees[adresse];
+                SSP2CON1bits.CKP2 = 1;
                 // Sur les PIC18 plus récents, BF s'allume en État 3.
                 // Il doit être lu et désactivé.
-                if (SSP1STATbits.BF) {
-                    SSP1STATbits.BF = 0;
+                if (SSP2STATbits.BF) {
+                    SSP2STATbits.BF = 0;
                 }
             }
         } else {
             // État 2 - Opération d'écriture, dernier octet reçu est une donnée:
-            if (SSP1STATbits.DA) {
+            if (SSP2STATbits.DA2) {
                 // L'esclave doit traiter la donnée reçue:
-                rappelCommande(adresse, SSP1BUF);
+                rappelCommande(adresse, SSP2BUF);
             }
             // État 1 - Opération d'écriture, dernier octet reçu est une adresse:
             else {
-                adresse = convertitEnAdresseLocale(SSP1BUF);
-                if (SSP1CON1bits.SSPOV) {
-                    SSP1CON1bits.SSPOV = 0;
+                adresse = convertitEnAdresseLocale(SSP2BUF);
+                if (SSP2CON1bits.SSPOV) {
+                    SSP2CON1bits.SSPOV = 0;
                 }
             }
         }
     }
-    PIR1bits.SSP1IF = 0;
 }
 
 /**
