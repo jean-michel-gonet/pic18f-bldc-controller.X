@@ -7,13 +7,36 @@
 #define TENSION_ALIMENTATION_MIN 7.4
 #define LECTURE_ALIMENTATION_MIN (unsigned char) (255 * (TENSION_ALIMENTATION_MIN / 2) / 5)
 
-#define NO_PID
+#undef NO_PID
+
+typedef enum {
+    /**
+     * En mode déplacement, le module de puissance est piloté par la vitesse
+     * demandée. L'erreur I est toujours zéro.
+     */
+    MODE_PID_DEPLACEMENT,
+    /**
+     * En mode manoeuvre, le module de puissance est piloté par l'erreur I. La
+     * vitesse demandée est toujours zéro.
+     */
+    MODE_PID_MANOEUVRE
+} ModePID;
 
 /** 
  * La tension moyenne maximum peut varier si la tension d'alimentation
  * tombe en dessous d'un certain seuil.
  */
 static int tensionMoyenneMax = TENSION_MOYENNE_MAX;
+
+/**
+ * Le mode actuel du module de puissance.
+ */
+static ModePID modePID = MODE_PID_DEPLACEMENT;
+
+/**
+ * En mode manoeuvre, la vitesse demandée est toujours zéro.
+ */
+static MagnitudeEtDirection vitesseZero = {AVANT, 0};
 
 #define P 16
 #define I 3
@@ -75,21 +98,31 @@ void pidTensionMoyenne(MagnitudeEtDirection *vitesseMesuree,
     int correction;
     int magnitude;
 
-    // Calcule l'erreur PID:
-    erreurP = soustraitAmoinsB(vitesseDemandee, vitesseMesuree);
-    erreurI += erreurP;
-    if (erreurI < -800) {
-        erreurI = -800;
+    // Calcule l'erreur P:
+    if (modePID == MODE_PID_DEPLACEMENT) {
+        erreurP = soustraitAmoinsB(vitesseDemandee, vitesseMesuree);
+    } else {
+        erreurP = soustraitAmoinsB(&vitesseZero, vitesseMesuree);
     }
-    if (erreurI > 800) {
-        erreurI = 800;
+    correction  = erreurP * P;
+
+    // Calcule l'erreur I:
+    if (modePID == MODE_PID_MANOEUVRE) {
+        erreurI += erreurP;
+        if (erreurI < -800) {
+            erreurI = -800;
+        }
+        if (erreurI > 800) {
+            erreurI = 800;
+        }
+        correction += erreurI * I;
+    } else {
+        erreurI = 0;
     }
+    
+    // Calcule l'erreur D:
     erreurD = erreurP - erreurPrecedente;
     erreurPrecedente = erreurP;
-
-    // Calcule le PID:
-    correction  = erreurP * P;
-    correction += erreurI * I;
     correction += erreurD * D;
     
     // Corrige la tension moyenne:
@@ -188,16 +221,27 @@ void PUISSANCE_machine(EvenementEtValeur *ev) {
             vitesseMesuree = &(tableauDeBord.vitesseMesuree);
             pidTensionMoyenne(vitesseMesuree, &vitesseDemandee);
             enfileMessageInterne(MOTEUR_TENSION_MOYENNE);
+            if (modePID == MODE_PID_MANOEUVRE) {
+                if (erreurI == 0) {
+                    enfileMessageInterne(DEPLACEMENT_ATTEINT);
+                }
+            }
             break;
 
-        case LECTURE_RC_AVANT_ARRIERE:
+        case VITESSE_DEMANDEE:
             evalueVitesseDemandee(ev->valeur, &vitesseDemandee);
+            modePID = MODE_PID_DEPLACEMENT;
+            break;
+            
+        case DEPLACEMENT_DEMANDE:
+            modePID = MODE_PID_MANOEUVRE;
+            erreurI = ev->valeur - 127;
             break;
     }
 }
 
 #ifdef TEST
-void test_evalueVitesseDemandee() {
+void test_evalue_la_vitesse_demandee() {
     MagnitudeEtDirection vitesseDemandee;
     
     evalueVitesseDemandee(128 + 30, &vitesseDemandee);
@@ -216,14 +260,14 @@ void test_evalueVitesseDemandee() {
     verifieEgalite("PEV21", vitesseDemandee.direction, AVANT);
     verifieEgalite("PEV22", vitesseDemandee.magnitude, 255);
 }
-void test_limiteTensionMoyenneMax() {
+void test_limite_la_tension_moyenne_maximum() {
     int n;
     EvenementEtValeur evenementEtValeur;
 
     reinitialisePid();
 
     // Marche avant:
-    evenementEtValeur.evenement = LECTURE_RC_AVANT_ARRIERE;
+    evenementEtValeur.evenement = VITESSE_DEMANDEE;
     evenementEtValeur.valeur = 80;
     PUISSANCE_machine(&evenementEtValeur);    
 
@@ -242,7 +286,7 @@ void test_limiteTensionMoyenneMax() {
     // La tension moyenne de sortie est à zéro:
     verifieEgalite("PMAX01", tableauDeBord.tensionMoyenne.magnitude, TENSION_MOYENNE_MAX_REDUITE/32);
 }
-void test_soustraitDesMagnitudesEtDirection() {
+void test_soustrait_MagnitudeEtDirection() {
     MagnitudeEtDirection a,b;
 
     // Signes opposés:
@@ -280,38 +324,68 @@ void convertitEntierEnMagnitudeEtDirection(int v, unsigned char n, MagnitudeEtDi
     magnitude >>= n;
     md->magnitude = (unsigned char) magnitude;
 }
-void modelePhysique(MagnitudeEtDirection *vitesseMesuree, MagnitudeEtDirection *vitesseDemandee) {
+
+void modelePhysique(unsigned char nombreIterations) {
+    EvenementEtValeur ev = {VITESSE_MESUREE, 0};
     unsigned char t, n;
     int vitesse = 0;
     
-    for (n = 0; n < 100; n++) {
-        pidTensionMoyenne(vitesseMesuree, vitesseDemandee);
-        
+    for (n = 0; n < nombreIterations; n++) {
+        PUISSANCE_machine(&ev);
         for (t = 0; t < 5; t++) {
-            vitesse += 3 * soustraitAmoinsB(&tableauDeBord.tensionMoyenne, vitesseMesuree);
-            convertitEntierEnMagnitudeEtDirection(vitesse, 5, vitesseMesuree);
+            // La constante 3 est calculée selon le poids de la voiture, les caractéristiques
+            // du moteur, le rapport des pignons du différentiel, et une constante de temps.
+            vitesse += 3 * soustraitAmoinsB(&tableauDeBord.tensionMoyenne, &tableauDeBord.vitesseMesuree);
+            convertitEntierEnMagnitudeEtDirection(vitesse, 5, &tableauDeBord.vitesseMesuree);
         }
     }    
 }
-void test_pidAtteintLaVitesseDemandee() {
-    MagnitudeEtDirection vitesseMesuree = {AVANT, 0};
-    MagnitudeEtDirection vitesseDemandee = {AVANT, 100};
-    
-    reinitialisePid();
-    modelePhysique(&vitesseMesuree, &vitesseDemandee);
-    verifieEgalite("PID001", vitesseMesuree.magnitude, 100);
-}
-void test_pidRepositionneLaVoitureAPointDeDepart() {
-    MagnitudeEtDirection vitesseDemandee = {AVANT, 0};
-    MagnitudeEtDirection vitesseMesuree = {AVANT, 0};
-    
-    reinitialisePid();
-    erreurI = 400;
 
-    modelePhysique(&vitesseMesuree, &vitesseDemandee);
+void test_pid_atteint_la_vitesse_demandee() {
+    EvenementEtValeur ev = {VITESSE_DEMANDEE, 128 + 50};
+    
+    reinitialisePid();
+    PUISSANCE_machine(&ev);
+    
+    modelePhysique(100);
+    verifieEgalite("PIDV01", tableauDeBord.vitesseMesuree.magnitude, 50 * 2);
+}
+void test_pid_atteint_la_position_demandee() {
+    EvenementEtValeur ev = {DEPLACEMENT_DEMANDE, 128 + 50};
+    
+    reinitialisePid();
+    tableauDeBord.vitesseMesuree.direction = AVANT;
+    tableauDeBord.vitesseMesuree.magnitude = 10;
+    PUISSANCE_machine(&ev);
+    
+    modelePhysique(100);
 
     verifieEgalite("PIDP1", erreurI, 0);
-    verifieEgalite("PID001", vitesseMesuree.magnitude, 0);
+    verifieEgalite("PIDP2", tableauDeBord.vitesseMesuree.magnitude, 0);
+}
+void test_MOTEUR_TENSION_MOYENNE_a_chaque_VITESSE_MESUREE() {
+    EvenementEtValeur evVitesseDemandee = {VITESSE_DEMANDEE, 150};
+    EvenementEtValeur evVitesseMesuree = {VITESSE_MESUREE, 128};
+    unsigned char n;
+    
+    reinitialisePid();
+    PUISSANCE_machine(&evVitesseDemandee);
+    for(n = 0; n < 5; n++) {
+        PUISSANCE_machine(&evVitesseMesuree);
+        verifieEgalite("PID_TENSM", defileMessageInterne()->evenement, MOTEUR_TENSION_MOYENNE);
+    }
+}
+void test_DEPLACEMENT_ATTEINT_si_deplacement_atteint() {
+    EvenementEtValeur evDeplacementDemande = {DEPLACEMENT_DEMANDE, 128};
+    EvenementEtValeur evVitesseMesuree = {VITESSE_MESUREE, 128};
+    
+    reinitialisePid();
+    initialiseMessagesInternes();
+    PUISSANCE_machine(&evDeplacementDemande);
+    erreurI = 0;
+    PUISSANCE_machine(&evVitesseMesuree);
+    verifieEgalite("PID_DA01", defileMessageInterne()->evenement, MOTEUR_TENSION_MOYENNE);
+    verifieEgalite("PID_DA02", defileMessageInterne()->evenement, DEPLACEMENT_ATTEINT);
 }
 
 /**
@@ -319,10 +393,12 @@ void test_pidRepositionneLaVoitureAPointDeDepart() {
  * @return Nombre de tests en erreur.
  */
 void test_puissance() {
-    test_soustraitDesMagnitudesEtDirection();
-    test_pidRepositionneLaVoitureAPointDeDepart();
-    test_pidAtteintLaVitesseDemandee();
-    test_evalueVitesseDemandee();
-    test_limiteTensionMoyenneMax();
+    test_soustrait_MagnitudeEtDirection();
+    test_pid_atteint_la_vitesse_demandee();
+    test_pid_atteint_la_position_demandee();
+    test_MOTEUR_TENSION_MOYENNE_a_chaque_VITESSE_MESUREE();
+    test_DEPLACEMENT_ATTEINT_si_deplacement_atteint();
+    test_evalue_la_vitesse_demandee();
+    test_limite_la_tension_moyenne_maximum();
 }
 #endif

@@ -15,6 +15,24 @@
  */
 #define SEUIL_NEUTRALITE_TELECOMMANDE 10
 
+typedef struct {
+    unsigned char deplacement;
+    unsigned char orientationRoues;
+} Manoeuvre;
+
+#define NEUTRE 127 
+
+const Manoeuvre const manoeuvres[] = {
+    {NEUTRE + 10, NEUTRE + 0},       // Avance un peu.
+    {NEUTRE + 10, NEUTRE + 50},      // Quart de tour avant gauche
+    {NEUTRE + 10, NEUTRE - 50},      // Quart de tour avant droit
+    {NEUTRE - 10, NEUTRE + 0},       // Recule un peu.
+    {NEUTRE - 10, NEUTRE + 50},      // Quart de tour arrière gauche.
+    {NEUTRE - 10, NEUTRE - 50}       // Quart de tour arrière droit
+};
+
+
+
 typedef enum {
     /** C'est la télécommande qui commande.*/
     MODE_TELECOMMANDE,
@@ -52,15 +70,19 @@ void calculePwmServoRouesAvant(unsigned char position) {
  * @param valeur Valeur associée à la commande.
  */
 void receptionBus(unsigned char adresse, unsigned char valeur) {
+    Manoeuvre const *manoeuvre;
     if (busOuTelecommande == MODE_BUS_DE_COMMANDES) {
         switch(adresse) {
             case 0:
-                enfileEvenement(LECTURE_RC_AVANT_ARRIERE, valeur);    
+                enfileEvenement(VITESSE_DEMANDEE, valeur);    
                 break;
             case 1:
                 enfileEvenement(LECTURE_RC_GAUCHE_DROITE, valeur);    
                 break;
             case 2:
+                manoeuvre = &manoeuvres[valeur];
+                enfileEvenement(DEPLACEMENT_DEMANDE, manoeuvre->deplacement);
+                enfileEvenement(LECTURE_RC_GAUCHE_DROITE, manoeuvre->orientationRoues);    
                 break;
             case 3:
                 break;
@@ -110,7 +132,7 @@ void receptionTelecommande(Evenement evenement, unsigned char valeur) {
  */
 void receptionTelecommandeAvantArriere(unsigned char valeur) {
     i2cExposeValeur(0, valeur);
-    receptionTelecommande(LECTURE_RC_AVANT_ARRIERE, valeur);
+    receptionTelecommande(VITESSE_DEMANDEE, valeur);
 }
 
 /**
@@ -184,7 +206,7 @@ void transmet_les_commandes_i2c() {
     
     receptionBus(0, 100);
     evenementEtValeur = defileEvenement();
-    verifieEgalite("DIR_ACI2C0", evenementEtValeur->evenement, LECTURE_RC_AVANT_ARRIERE);
+    verifieEgalite("DIR_ACI2C0", evenementEtValeur->evenement, VITESSE_DEMANDEE);
     verifieEgalite("DIR_ACI2C1", evenementEtValeur->valeur, 100);
     
     receptionBus(1, 110);
@@ -200,7 +222,7 @@ void transmet_les_commandes_de_la_telecommande() {
         
     receptionTelecommandeAvantArriere(21);
     evenementEtValeur = defileEvenement();
-    verifieEgalite("DIR_T0", evenementEtValeur->evenement, LECTURE_RC_AVANT_ARRIERE);
+    verifieEgalite("DIR_T0", evenementEtValeur->evenement, VITESSE_DEMANDEE);
     verifieEgalite("DIR_T1", evenementEtValeur->valeur, 21);
 
     receptionTelecommandeGaucheDroite(22);
