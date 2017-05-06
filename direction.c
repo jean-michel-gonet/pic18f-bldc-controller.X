@@ -23,12 +23,12 @@ typedef struct {
 #define NEUTRE 127 
 
 const Manoeuvre const manoeuvres[] = {
-    {NEUTRE + 10, NEUTRE + 0},       // Avance un peu.
-    {NEUTRE + 10, NEUTRE + 50},      // Quart de tour avant gauche
-    {NEUTRE + 10, NEUTRE - 50},      // Quart de tour avant droit
-    {NEUTRE - 10, NEUTRE + 0},       // Recule un peu.
-    {NEUTRE - 10, NEUTRE + 50},      // Quart de tour arrière gauche.
-    {NEUTRE - 10, NEUTRE - 50}       // Quart de tour arrière droit
+    {NEUTRE + 95, NEUTRE +   0},      // Avance un peu.
+    {NEUTRE + 95, NEUTRE +  90},      // Quart de tour avant gauche
+    {NEUTRE + 95, NEUTRE -  90},      // Quart de tour avant droit
+    {NEUTRE - 95, NEUTRE +   0},      // Recule un peu.
+    {NEUTRE - 95, NEUTRE +  90},      // Quart de tour arrière gauche.
+    {NEUTRE - 95, NEUTRE -  90}       // Quart de tour arrière droit
 };
 
 

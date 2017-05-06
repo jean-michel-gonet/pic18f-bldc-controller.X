@@ -38,13 +38,15 @@ static ModePID modePID = MODE_PID_DEPLACEMENT;
  */
 static MagnitudeEtDirection vitesseZero = {AVANT, 0};
 
+/** Valeurs à utiliser si la voiture est sur le sol. */
 #define P 16
 #define I 3
 #define D 48
 
-#define P_ 16
-#define I_ 3
-#define D_ 8
+/** Valeurs à utiliser si la voiture est sur des plots. */
+#define P_ 30
+#define I_ 4
+#define D_ 4
 
 int soustraitAmoinsB(MagnitudeEtDirection *a, 
                      MagnitudeEtDirection *b) {
@@ -236,6 +238,7 @@ void PUISSANCE_machine(EvenementEtValeur *ev) {
         case DEPLACEMENT_DEMANDE:
             modePID = MODE_PID_MANOEUVRE;
             erreurI = ev->valeur - 127;
+            erreurI *= 2;
             break;
     }
 }
