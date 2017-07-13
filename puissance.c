@@ -2,8 +2,8 @@
 #include "test.h"
 #include "tableauDeBord.h"
 
-#define TENSION_MOYENNE_MAX 180 * 32 
-#define TENSION_MOYENNE_MAX_REDUITE 40 * 32
+#define TENSION_MOYENNE_MAX 180 * 64 
+#define TENSION_MOYENNE_MAX_REDUITE 40 * 64
 #define TENSION_ALIMENTATION_MIN 7.4
 #define LECTURE_ALIMENTATION_MIN (unsigned char) (255 * (TENSION_ALIMENTATION_MIN / 2) / 5)
 
@@ -39,9 +39,9 @@ static ModePID modePID = MODE_PID_DEPLACEMENT;
 static MagnitudeEtDirection vitesseZero = {AVANT, 0};
 
 /** Valeurs à utiliser si la voiture est sur le sol. */
-#define P 16
-#define I 3
-#define D 48
+#define P 12
+#define I 1
+#define D 4
 
 /** Valeurs à utiliser si la voiture est sur des plots. */
 #define P_ 30
@@ -150,7 +150,7 @@ void pidTensionMoyenne(MagnitudeEtDirection *vitesseMesuree,
         tableauDeBord.tensionMoyenne.direction = AVANT;
         magnitude = tensionMoyenne;
     }
-    magnitude >>= 5;
+    magnitude >>= 6;
     tableauDeBord.tensionMoyenne.magnitude = (unsigned char) magnitude;
 #endif
 }
@@ -287,7 +287,7 @@ void test_limite_la_tension_moyenne_maximum() {
     }
 
     // La tension moyenne de sortie est à zéro:
-    verifieEgalite("PMAX01", tableauDeBord.tensionMoyenne.magnitude, TENSION_MOYENNE_MAX_REDUITE/32);
+    verifieEgalite("PMAX01", tableauDeBord.tensionMoyenne.magnitude, TENSION_MOYENNE_MAX_REDUITE/64);
 }
 void test_soustrait_MagnitudeEtDirection() {
     MagnitudeEtDirection a,b;
