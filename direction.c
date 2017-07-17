@@ -3,25 +3,36 @@
 #include "direction.h"
 #include "evenements.h"
 #include "i2c.h"
+#include "file.h"
+
+/**
+ * Position centrale de la télécommande.
+ */
+#define NEUTRE 127 
+
+/** 
+ * Distance du neutre en deçà de la quelle on considère que la télécommande
+ * est centrée.
+ */
+#define SEUIL_NEUTRALITE_TELECOMMANDE 10
 
 /** 
  * Comptes de la base de temps jusqu'à considérer 
  * que la télécommande n'est plus active (environ 5 secondes). 
  */
-#define TEMPS_INACTIVITE_TELECOMMANDE 120
+#define TEMPS_INACTIVITE_TELECOMMANDE 35
 
-/** 
- * Seuil en dessous du quel on considère que la télécommande est neutre.
+/**
+ * Décrit une manoeuvre.
  */
-#define SEUIL_NEUTRALITE_TELECOMMANDE 10
-
 typedef struct {
     unsigned char deplacement;
     unsigned char orientationRoues;
 } Manoeuvre;
 
-#define NEUTRE 127 
-
+/**
+ * Liste des manoeuvres.
+ */
 const Manoeuvre const manoeuvres[] = {
     {NEUTRE + 95, NEUTRE +   0},      // Avance un peu.
     {NEUTRE + 95, NEUTRE +  90},      // Quart de tour avant gauche
@@ -31,8 +42,9 @@ const Manoeuvre const manoeuvres[] = {
     {NEUTRE - 95, NEUTRE -  90}       // Quart de tour arrière droit
 };
 
-
-
+/**
+ * Mode de direction.
+ */
 typedef enum {
     /** C'est la télécommande qui commande.*/
     MODE_TELECOMMANDE,
@@ -49,6 +61,54 @@ BusOuTelecommande busOuTelecommande = MODE_TELECOMMANDE;
  * que la télécommande n'est plus active.
  */
 unsigned char tempsInactiviteTelecommande = TEMPS_INACTIVITE_TELECOMMANDE;
+
+/**
+ * Indique le nombre de manoeuvres à exécuter (y compris la manoeuvre en cours).
+ */
+unsigned char nombreDeManoeuvresAExecuter = 0;
+
+/**
+ * File de manoeuvres.
+ */
+File fileManoeuvres;
+
+/**
+ * Vide la file des manoeuvres.
+ */
+void reinitialiseManoeuvres() {
+    fileReinitialise(&fileManoeuvres);
+    nombreDeManoeuvresAExecuter = 0;
+}
+
+/**
+ * Si il y en a une disponible, défile une manoeuvre et la traduit
+ * en événements.
+ */
+void defileManoeuvre() {
+    unsigned char numeroDeManoeuvre;
+    Manoeuvre const *manoeuvre;
+    if (!fileEstVide(&fileManoeuvres)) {
+        numeroDeManoeuvre = fileDefile(&fileManoeuvres);
+        manoeuvre = &manoeuvres[numeroDeManoeuvre];
+        enfileEvenement(DEPLACEMENT_DEMANDE, manoeuvre->deplacement);
+        enfileEvenement(LECTURE_RC_GAUCHE_DROITE, manoeuvre->orientationRoues);    
+    } else {
+        enfileEvenement(VITESSE_DEMANDEE, NEUTRE);
+    }
+}
+
+/**
+ * Ajoute une nouvelle manoeuvre à la file, et l'exécute immédiatement
+ * si il n'y en a aucune en cours.
+ * @param numeroDeManoeuvre Le numéro de manoeuvre.
+ */
+void enfileManoeuvre(unsigned char numeroDeManoeuvre) {
+    fileEnfile(&fileManoeuvres, numeroDeManoeuvre);    
+    if (nombreDeManoeuvresAExecuter == 0) {
+        defileManoeuvre();
+    }
+    nombreDeManoeuvresAExecuter ++;
+}
 
 /**
  * Calcule la forme du signal PWM à produire pour positionner les roues avant
@@ -70,19 +130,18 @@ void calculePwmServoRouesAvant(unsigned char position) {
  * @param valeur Valeur associée à la commande.
  */
 void receptionBus(unsigned char adresse, unsigned char valeur) {
-    Manoeuvre const *manoeuvre;
     if (busOuTelecommande == MODE_BUS_DE_COMMANDES) {
         switch(adresse) {
             case 0:
-                enfileEvenement(VITESSE_DEMANDEE, valeur);    
+                reinitialiseManoeuvres();
+                enfileEvenement(VITESSE_DEMANDEE, valeur);
                 break;
             case 1:
+                reinitialiseManoeuvres();
                 enfileEvenement(LECTURE_RC_GAUCHE_DROITE, valeur);    
                 break;
             case 2:
-                manoeuvre = &manoeuvres[valeur];
-                enfileEvenement(DEPLACEMENT_DEMANDE, manoeuvre->deplacement);
-                enfileEvenement(LECTURE_RC_GAUCHE_DROITE, manoeuvre->orientationRoues);    
+                enfileManoeuvre(valeur);
                 break;
             case 3:
                 break;
@@ -113,7 +172,9 @@ void receptionTelecommande(Evenement evenement, unsigned char valeur) {
     switch(busOuTelecommande) {
         case MODE_BUS_DE_COMMANDES:
             if (valeurTelecommandeEstPasNeutre(valeur)) {
+                reinitialiseManoeuvres();
                 busOuTelecommande = MODE_TELECOMMANDE;
+                enfileEvenement(evenement, valeur);    
             }
             break;
         case MODE_TELECOMMANDE:
@@ -149,17 +210,27 @@ void receptionTelecommandeGaucheDroite(unsigned char valeur) {
  * @param ev Événement à traiter.
  */
 void DIRECTION_machine(EvenementEtValeur *ev) {
-    if (ev->evenement == BASE_DE_TEMPS) {
-        if (tempsInactiviteTelecommande > 0) {
-            tempsInactiviteTelecommande--;
-            i2cExposeValeur(2, tempsInactiviteTelecommande);
-            if (tempsInactiviteTelecommande == 0) {
-                busOuTelecommande = MODE_BUS_DE_COMMANDES;
+    switch (ev->evenement) {
+        case BASE_DE_TEMPS:
+            if (tempsInactiviteTelecommande > 0) {
+                tempsInactiviteTelecommande--;
+                i2cExposeValeur(2, tempsInactiviteTelecommande);
+                if (tempsInactiviteTelecommande == 0) {
+                    busOuTelecommande = MODE_BUS_DE_COMMANDES;
+                }
             }
-        }
-    }
-    if (ev->evenement == LECTURE_RC_GAUCHE_DROITE) {
-          calculePwmServoRouesAvant(ev->valeur);
+            break;
+            
+        case LECTURE_RC_GAUCHE_DROITE:
+            calculePwmServoRouesAvant(ev->valeur);
+            break;
+            
+        case DEPLACEMENT_ATTEINT:
+            if (nombreDeManoeuvresAExecuter > 0) {
+                nombreDeManoeuvresAExecuter--;
+                defileManoeuvre();
+            }
+            break;
     }
 }
 
@@ -283,6 +354,142 @@ void passe_en_mode_bus_si_la_telecommande_est_longtemps_neutre() {
     verifieEgalite("DIR_N1", busOuTelecommande, MODE_BUS_DE_COMMANDES);
 }
 
+void execute_immediatement_la_premiere_manoeuvre() {
+    initaliseEvenements();
+    busOuTelecommande = MODE_BUS_DE_COMMANDES;
+    EvenementEtValeur *evenementEtValeur;
+    
+    receptionBus(2, 1);
+    receptionBus(2, 2);
+
+    evenementEtValeur = defileEvenement();
+    verifieEgalite("DIR_MAP0", evenementEtValeur->evenement, DEPLACEMENT_DEMANDE);
+    verifieEgalite("DIR_MAP1", evenementEtValeur->valeur, manoeuvres[1].deplacement);
+    
+    evenementEtValeur = defileEvenement();
+    verifieEgalite("DIR_MAP2", evenementEtValeur->evenement, LECTURE_RC_GAUCHE_DROITE);
+    verifieEgalite("DIR_MAP3", evenementEtValeur->valeur, manoeuvres[1].orientationRoues);
+
+    verifieEgalite("DIR_MAP4", defileEvenement(), 0);
+}
+
+void execute_la_suivante_manoeuvre_apres_avoir_complete_la_premiere() {
+    reinitialiseManoeuvres();
+    initaliseEvenements();
+    busOuTelecommande = MODE_BUS_DE_COMMANDES;
+    EvenementEtValeur deplacementAtteint = {DEPLACEMENT_ATTEINT, 0};
+    EvenementEtValeur *evenementEtValeur;
+    
+    receptionBus(2, 1);
+    receptionBus(2, 2);
+    
+    defileEvenement();
+    defileEvenement();
+    verifieEgalite("DIR_MASU00", defileEvenement(), 0);
+    verifieEgalite("DIR_MASU01", nombreDeManoeuvresAExecuter, 2);
+
+    DIRECTION_machine(&deplacementAtteint);
+    verifieEgalite("DIR_MASU02", nombreDeManoeuvresAExecuter, 1);    
+    
+    evenementEtValeur = defileEvenement();
+    verifieEgalite("DIR_MASU03", evenementEtValeur->evenement, DEPLACEMENT_DEMANDE);
+    verifieEgalite("DIR_MASU04", evenementEtValeur->valeur, manoeuvres[2].deplacement);
+    evenementEtValeur = defileEvenement();
+    verifieEgalite("DIR_MASU05", evenementEtValeur->evenement, LECTURE_RC_GAUCHE_DROITE);
+    verifieEgalite("DIR_MASU06", evenementEtValeur->valeur, manoeuvres[2].orientationRoues);
+
+    DIRECTION_machine(&deplacementAtteint);
+    verifieEgalite("DIR_MASU07", nombreDeManoeuvresAExecuter, 0);    
+}
+
+void execute_un_arret_apres_avoir_complete_la_derniere_manoeuvre() {
+    reinitialiseManoeuvres();
+    initaliseEvenements();
+    busOuTelecommande = MODE_BUS_DE_COMMANDES;
+    EvenementEtValeur deplacementAtteint = {DEPLACEMENT_ATTEINT, 0};
+    EvenementEtValeur *evenementEtValeur;
+    
+    receptionBus(2, 1);
+    receptionBus(2, 2);
+
+    defileEvenement();
+    defileEvenement();
+    DIRECTION_machine(&deplacementAtteint);    
+
+    defileEvenement();
+    defileEvenement();
+    DIRECTION_machine(&deplacementAtteint);    
+
+    evenementEtValeur = defileEvenement();
+    verifieEgalite("DIR_MAAR01", evenementEtValeur->evenement, VITESSE_DEMANDEE);
+    verifieEgalite("DIR_MAAR02", evenementEtValeur->valeur, 0);
+}
+
+void reinitialise_les_manoeuvres_si_commande_de_vitesse() {
+    reinitialiseManoeuvres();
+    initaliseEvenements();
+    busOuTelecommande = MODE_BUS_DE_COMMANDES;
+    EvenementEtValeur *evenementEtValeur;
+
+    receptionBus(2, 1);
+    evenementEtValeur = defileEvenement();
+    evenementEtValeur = defileEvenement();
+
+    receptionBus(2, 1);
+    receptionBus(2, 1);
+    receptionBus(2, 1);
+    
+    receptionBus(0, 12);
+    evenementEtValeur = defileEvenement();
+    verifieEgalite("DIR_MARVD0", evenementEtValeur->evenement, VITESSE_DEMANDEE);
+    verifieEgalite("DIR_MARVD1", evenementEtValeur->valeur, 12);
+    verifieEgalite("DIR_MARVD2", nombreDeManoeuvresAExecuter, 0);       
+    verifieEgalite("DIR_MARVD3", defileEvenement(), 0);
+}
+void reinitialise_les_manoeuvres_si_commande_de_orientation_des_roues() {
+    reinitialiseManoeuvres();
+    initaliseEvenements();
+    busOuTelecommande = MODE_BUS_DE_COMMANDES;
+    EvenementEtValeur *evenementEtValeur;
+
+    receptionBus(2, 1);
+    evenementEtValeur = defileEvenement();
+    evenementEtValeur = defileEvenement();
+
+    receptionBus(2, 1);
+    receptionBus(2, 1);
+    receptionBus(2, 1);
+    
+    receptionBus(1, 12);
+    evenementEtValeur = defileEvenement();
+    verifieEgalite("DIR_MARDD0", evenementEtValeur->evenement, LECTURE_RC_GAUCHE_DROITE);
+    verifieEgalite("DIR_MARDD1", evenementEtValeur->valeur, 12);
+    verifieEgalite("DIR_MARDD2", nombreDeManoeuvresAExecuter, 0);       
+    verifieEgalite("DIR_MARDD3", defileEvenement(), 0);    
+}
+
+void reinitialise_les_manoeuvres_si_telecommande() {
+    reinitialiseManoeuvres();
+    initaliseEvenements();
+    busOuTelecommande = MODE_BUS_DE_COMMANDES;
+    EvenementEtValeur *evenementEtValeur;
+
+    receptionBus(2, 1);
+    evenementEtValeur = defileEvenement();
+    evenementEtValeur = defileEvenement();
+
+    receptionBus(2, 1);
+    receptionBus(2, 1);
+    receptionBus(2, 1);
+    
+    receptionTelecommandeAvantArriere(10);
+    evenementEtValeur = defileEvenement();
+    verifieEgalite("DIR_MART0", evenementEtValeur->evenement, VITESSE_DEMANDEE);
+    verifieEgalite("DIR_MART1", evenementEtValeur->valeur, 10);
+    verifieEgalite("DIR_MART2", nombreDeManoeuvresAExecuter, 0);       
+    verifieEgalite("DIR_MART3", defileEvenement(), 0);
+}
+
 /**
  * Tests unitaires pour le positionnement des roues de direction.
  */
@@ -295,5 +502,12 @@ void test_direction() {
     passe_en_mode_telecommande_si_le_canal_1_est_pas_neutre();
     passe_en_mode_telecommande_si_le_canal_2_est_pas_neutre();
     passe_en_mode_bus_si_la_telecommande_est_longtemps_neutre();
+    
+    execute_immediatement_la_premiere_manoeuvre();
+    execute_la_suivante_manoeuvre_apres_avoir_complete_la_premiere();
+    execute_un_arret_apres_avoir_complete_la_derniere_manoeuvre();
+    reinitialise_les_manoeuvres_si_commande_de_vitesse();
+    reinitialise_les_manoeuvres_si_commande_de_orientation_des_roues();
+    reinitialise_les_manoeuvres_si_telecommande();
 }
 #endif
