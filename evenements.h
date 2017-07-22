@@ -6,7 +6,7 @@
 /**
  * Réinitialise la file d'événements.
  */
-void initaliseEvenements();
+void initialiseEvenements();
 
 /**
  * Ajoute un événement à la file.

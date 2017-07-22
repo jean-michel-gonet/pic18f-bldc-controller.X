@@ -11,7 +11,7 @@ static File fileEvenementEtValeur;
 /**
  * Initialise la file d'événements.
  */
-void initaliseEvenements() {
+void initialiseEvenements() {
     fileReinitialise(&fileEvenementEtValeur);
 }
 
@@ -59,7 +59,7 @@ void test_evenements() {
     struct EVENEMENT_ET_VALEUR *ev1;
     unsigned char n;
 
-    initaliseEvenements();
+    initialiseEvenements();
 
     // Test A: file vide, puis ajout de 1 élément:
     verifieEgalite("Q-A-01", (int) defileEvenement(), 0);
@@ -108,7 +108,7 @@ void test_evenements() {
     }
 
     // Test C: Remplit la file et vérifie l'alerte:
-    for(n = 0; n < 4; n++) {
+    for(n = 0; n < 15; n++) {
         enfileEvenement(MOTEUR_BLOCAGE, n);
     }
     verifieEgalite("Q-C-00", fileDeborde(), 0);

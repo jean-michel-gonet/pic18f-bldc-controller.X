@@ -1,7 +1,7 @@
 #ifndef __FILE_H
 #define	__FILE_H
 
-#define FILE_TAILLE 16
+#define FILE_TAILLE 32
 
 typedef struct {
     /** Espace de mémoire pour stocker la file. */
