@@ -55,9 +55,7 @@ typedef enum EVENEMENT {
             
     /** Demande de déplacement de la voiture. */
     DEPLACEMENT_DEMANDE,
-    
-    /** La voiture a effectué le déplacement demandé. */
-    DEPLACEMENT_ATTEINT
+            
 } Evenement;
 
 /** Pour indiquer le signe d'une magnitude absolue.*/

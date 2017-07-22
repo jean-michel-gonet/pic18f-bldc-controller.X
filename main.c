@@ -157,6 +157,12 @@ void low_priority interrupt interruptionsBassePriorite() {
             tempsMesureVitesse = TEMPS_BASE_DE_TEMPS;
         }
 
+        // Déplacement atteint:
+        if (tableauDeBord.deplacementAtteint) {
+            tableauDeBord.deplacementAtteint = 0;
+            defileManoeuvre();
+        }
+
         // Événement PHASE:
         hall = PORTA & 7;
         if (hall != hall0) {
@@ -255,14 +261,13 @@ void hardwareInitialise() {
     // Active le MSSP2 en mode Esclave I2C:
     SSP2CON1bits.SSPEN = 1;             // Active le module SSP.    
     
-    SSP2ADD = LECTURE_VITESSE_RC;       // 1ère Adresse de l'esclave.
-    SSP2MSK = I2C_MASQUE_ADRESSES_ESCLAVES;
+    SSP2ADD = I2C_ADRESSE_DE_BASE;          // Adresse de base de l'esclave.
+    SSP2MSK = I2C_MASQUE_ADRESSES_ESCLAVES; // Masque d'adresses.
     SSP2CON1bits.SSPM = 0b1110;         // SSP2 en mode esclave I2C avec adresse de 7 bits et interruptions STOP et START.
         
     SSP2CON3bits.PCIE = 0;              // Désactive l'interruption en cas STOP.
     SSP2CON3bits.SCIE = 0;              // Désactive l'interruption en cas de START.
     SSP2CON3bits.SBCDE = 0;             // Désactive l'interruption en cas de collision.
-    SSP2CON3bits.BOEN = 1;              // 
 
     PIE3bits.SSP2IE = 1;                // Interruption en cas de transmission I2C...
     IPR3bits.SSP2IP = 0;                // ... de basse priorité.
@@ -299,8 +304,9 @@ void main() {
     
     // Initialise le software:
     i2cRappelCommande(receptionBus);
-    initaliseEvenements();
+    initialiseEvenements();
     initialiseMessagesInternes();
+    initialiseDirection();
 
     // Surveille la file d'événements, et les traite au fur
     // et à mesure:

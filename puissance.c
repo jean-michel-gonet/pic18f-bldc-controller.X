@@ -1,6 +1,7 @@
 #include "puissance.h"
 #include "test.h"
 #include "tableauDeBord.h"
+#include "i2c.h"
 
 #define TENSION_MOYENNE_MAX 180 * 64 
 #define TENSION_MOYENNE_MAX_REDUITE 40 * 64
@@ -39,8 +40,8 @@ static ModePID modePID = MODE_PID_DEPLACEMENT;
 static MagnitudeEtDirection vitesseZero = {AVANT, 0};
 
 /** Valeurs à utiliser si la voiture est sur le sol. */
-#define P 12
-#define I 1
+#define P 18
+#define I 2
 #define D 4
 
 /** Valeurs à utiliser si la voiture est sur des plots. */
@@ -97,6 +98,7 @@ void pidTensionMoyenne(MagnitudeEtDirection *vitesseMesuree,
 #else
     int erreurD;
     int erreurP;
+    int nouvelleErreurI;
     int correction;
     int magnitude;
 
@@ -110,17 +112,29 @@ void pidTensionMoyenne(MagnitudeEtDirection *vitesseMesuree,
 
     // Calcule l'erreur I:
     if (modePID == MODE_PID_MANOEUVRE) {
-        erreurI += erreurP;
-        if (erreurI < -800) {
-            erreurI = -800;
+        nouvelleErreurI = erreurI + erreurP;
+        // Détecte le passage par zéro:
+        if (nouvelleErreurI <= 0) {
+            if (erreurI > 0) {
+                tableauDeBord.deplacementAtteint = 255;            
+                if (nouvelleErreurI < -800) {
+                    nouvelleErreurI = -800;
+                }
+            }
+        } else {
+            if (erreurI <= 0) {
+                tableauDeBord.deplacementAtteint = 255;            
+                if (nouvelleErreurI > 800) {
+                    nouvelleErreurI = 800;
+                }
+            }
         }
-        if (erreurI > 800) {
-            erreurI = 800;
-        }
+        erreurI = nouvelleErreurI;
         correction += erreurI * I;
     } else {
         erreurI = 0;
     }
+    i2cExposeValeur(LECTURE_I2C_LECTURE_ERREUR_I, erreurI);
     
     // Calcule l'erreur D:
     erreurD = erreurP - erreurPrecedente;
@@ -222,12 +236,7 @@ void PUISSANCE_machine(EvenementEtValeur *ev) {
         case VITESSE_MESUREE:
             vitesseMesuree = &(tableauDeBord.vitesseMesuree);
             pidTensionMoyenne(vitesseMesuree, &vitesseDemandee);
-            enfileMessageInterne(MOTEUR_TENSION_MOYENNE);
-            if (modePID == MODE_PID_MANOEUVRE) {
-                if (erreurI == 0) {
-                    enfileMessageInterne(DEPLACEMENT_ATTEINT);
-                }
-            }
+            enfileMessageInterne(MOTEUR_TENSION_MOYENNE, 0);
             break;
 
         case VITESSE_DEMANDEE:
@@ -388,7 +397,7 @@ void test_DEPLACEMENT_ATTEINT_si_deplacement_atteint() {
     erreurI = 0;
     PUISSANCE_machine(&evVitesseMesuree);
     verifieEgalite("PID_DA01", defileMessageInterne()->evenement, MOTEUR_TENSION_MOYENNE);
-    verifieEgalite("PID_DA02", defileMessageInterne()->evenement, DEPLACEMENT_ATTEINT);
+    verifieEgalite("PID_DA02", tableauDeBord.deplacementAtteint, 255);
 }
 
 /**

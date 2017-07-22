@@ -19,9 +19,11 @@ void initialiseMessagesInternes() {
 /**
  * Ajoute un événement à la file de messages internes.
  * @param evenement L'événement.
+ * @param valeur Valeur associée.
  */
-void enfileMessageInterne(Evenement evenement) {
+void enfileMessageInterne(Evenement evenement, unsigned char valeur) {
     fileEnfile(&fileMessagesInternes, evenement);
+    fileEnfile(&fileMessagesInternes, valeur);
 }
     
 EvenementEtValeur *defileMessageInterne() {
@@ -32,7 +34,7 @@ EvenementEtValeur *defileMessageInterne() {
     }
     
     ev.evenement = fileDefile(&fileMessagesInternes);
-    ev.valeur = 0;
+    ev.valeur = fileDefile(&fileMessagesInternes);
     
     return &ev;
 }
@@ -47,7 +49,7 @@ void test_enfileEtDefileUnMessageInterne() {
     initialiseMessagesInternes();
     
     // Enfile et défile un événement:
-    enfileMessageInterne(LECTURE_COURANT);
+    enfileMessageInterne(LECTURE_COURANT, 0);
     evenementEtValeur = defileMessageInterne();
     verifieEgalite("TDB-01", evenementEtValeur->evenement, LECTURE_COURANT);
     
@@ -61,8 +63,8 @@ void test_enfileEtDefileDeuxMessagesInternes() {
     initialiseMessagesInternes();
     
     // Enfile et défile un événement:
-    enfileMessageInterne(LECTURE_COURANT);
-    enfileMessageInterne(LECTURE_TEMPERATURE);
+    enfileMessageInterne(LECTURE_COURANT, 0);
+    enfileMessageInterne(LECTURE_TEMPERATURE, 0);
     
     evenementEtValeur = defileMessageInterne();
     verifieEgalite("TDB2-01", evenementEtValeur->evenement, LECTURE_COURANT);
@@ -82,8 +84,8 @@ void test_enfileEtDefileUnBonPaquetDeMessages() {
     
     for (n = 0; n < 100; n++) {
         // Enfile deux événements:
-        enfileMessageInterne(LECTURE_COURANT);
-        enfileMessageInterne(LECTURE_TEMPERATURE);
+        enfileMessageInterne(LECTURE_COURANT, 0);
+        enfileMessageInterne(LECTURE_TEMPERATURE, 0);
         
         // Défile les événements:
         evenementEtValeur = defileMessageInterne();

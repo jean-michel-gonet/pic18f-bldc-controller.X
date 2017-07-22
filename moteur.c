@@ -176,7 +176,7 @@ void MOTEUR_machine(EvenementEtValeur *ev) {
             tableauDeBord.vitesseMesuree.magnitude = mesureDeVitesse.magnitude;
             tableauDeBord.vitesseMesuree.direction = mesureDeVitesse.direction;
             mesureDeVitesse.magnitude = 0;
-            enfileMessageInterne(VITESSE_MESUREE);
+            enfileMessageInterne(VITESSE_MESUREE, 0);
             break;
     }
 }
