@@ -78,11 +78,11 @@ File fileManoeuvres;
 void reinitialiseManoeuvres() {
     fileReinitialise(&fileManoeuvres);
     nombreDeManoeuvresAExecuter = 0;
+    i2cExposeValeur(LECTURE_I2C_NOMBRE_DE_MANOEUVRES, 0);
 }
 
 void initialiseDirection() {
     reinitialiseManoeuvres();
-    nombreDeManoeuvresAExecuter = 0;
     busOuTelecommande = MODE_TELECOMMANDE;
     tempsInactiviteTelecommande = TEMPS_INACTIVITE_TELECOMMANDE;
 }
@@ -109,7 +109,6 @@ void defileManoeuvre() {
         executeManoeuvre(numeroDeManoeuvre);
         nombreDeManoeuvresAExecuter--;
     } else {
-        enfileEvenement(VITESSE_DEMANDEE, NEUTRE);
         nombreDeManoeuvresAExecuter = 0;
     }
     i2cExposeValeur(LECTURE_I2C_NOMBRE_DE_MANOEUVRES, nombreDeManoeuvresAExecuter);
