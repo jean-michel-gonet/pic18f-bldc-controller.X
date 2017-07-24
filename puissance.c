@@ -39,15 +39,10 @@ static ModePID modePID = MODE_PID_DEPLACEMENT;
  */
 static MagnitudeEtDirection vitesseZero = {AVANT, 0};
 
-/** Valeurs à utiliser si la voiture est sur le sol. */
+/** Paramètres PID. */
 #define P 24
 #define I 4
 #define D 9
-
-/** Valeurs à utiliser si la voiture est sur des plots. */
-#define P_ 30
-#define I_ 4
-#define D_ 4
 
 int soustraitAmoinsB(MagnitudeEtDirection *a, 
                      MagnitudeEtDirection *b) {
