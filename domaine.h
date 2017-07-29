@@ -3,6 +3,8 @@
 
 // Quelques constantes:
 #define ERROR 255
+#define TRUE 255
+#define FALSE 0
 #define CYCLE 36
 #define TEMPS_MORT 12
 #define CCPR_MIN 0
@@ -90,5 +92,16 @@ typedef struct {
     Direction direction;
     unsigned char magnitude;
 } MagnitudeEtDirection;
+
+int compareAetB(MagnitudeEtDirection *a, 
+                     MagnitudeEtDirection *b);
+unsigned char opereAmoinsB(MagnitudeEtDirection *a, 
+                           MagnitudeEtDirection *b);
+unsigned char opereAplusB(MagnitudeEtDirection *a, 
+                          MagnitudeEtDirection *b);
+
+#ifdef TEST
+void test_domaine();
+#endif
 
 #endif

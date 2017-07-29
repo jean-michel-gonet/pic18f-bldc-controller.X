@@ -44,28 +44,6 @@ static MagnitudeEtDirection vitesseZero = {AVANT, 0};
 #define I 4
 #define D 9
 
-int soustraitAmoinsB(MagnitudeEtDirection *a, 
-                     MagnitudeEtDirection *b) {
-    int resultat;
-    switch (a->direction) {
-        case AVANT:
-            resultat = a->magnitude;
-            break;
-        case ARRIERE:
-            resultat = -a->magnitude;
-            break;
-        default:
-            return 0;
-    }
-    switch (b->direction) {
-        case ARRIERE:
-            return resultat + b->magnitude;
-        case AVANT:
-        default:
-            return resultat - b->magnitude;
-    }
-}
-
 static int tensionMoyenne = 0;   // Tension moyenne, multipliée par 32
 static int erreurPrecedente = 0; // Erreur précédente, pour calculer D.
 static int erreurI = 0;          // Somme des erreurs précédentes, pour I.
@@ -99,9 +77,9 @@ void pidTensionMoyenne(MagnitudeEtDirection *vitesseMesuree,
 
     // Calcule l'erreur P:
     if (modePID == MODE_PID_DEPLACEMENT) {
-        erreurP = soustraitAmoinsB(vitesseDemandee, vitesseMesuree);
+        erreurP = compareAetB(vitesseDemandee, vitesseMesuree);
     } else {
-        erreurP = soustraitAmoinsB(&vitesseZero, vitesseMesuree);
+        erreurP = compareAetB(&vitesseZero, vitesseMesuree);
     }
     correction  = erreurP * P;
 
@@ -293,32 +271,7 @@ void test_limite_la_tension_moyenne_maximum() {
     // La tension moyenne de sortie est à zéro:
     verifieEgalite("PMAX01", tableauDeBord.tensionMoyenne.magnitude, TENSION_MOYENNE_MAX_REDUITE/64);
 }
-void test_soustrait_MagnitudeEtDirection() {
-    MagnitudeEtDirection a,b;
 
-    // Signes opposés:
-    a.direction = AVANT;
-    b.direction = ARRIERE;
-    
-    a.magnitude = 100;
-    b.magnitude = 50;
-    verifieEgalite("SO01p", soustraitAmoinsB(&a, &b),  150);
-    verifieEgalite("SO01n", soustraitAmoinsB(&b, &a), -150);
-    
-    a.magnitude = 50;
-    b.magnitude = 100;
-    verifieEgalite("SO02p", soustraitAmoinsB(&a, &b),  150);
-    verifieEgalite("SO02n", soustraitAmoinsB(&b, &a), -150);
-
-    // Signes identiques:
-    a.direction = ARRIERE;
-    b.direction = ARRIERE;
-    
-    a.magnitude = 100;
-    b.magnitude = 50;
-    verifieEgalite("SO03p", soustraitAmoinsB(&a, &b), -50);
-    verifieEgalite("SO03n", soustraitAmoinsB(&b, &a),  50);
-}
 void convertitEntierEnMagnitudeEtDirection(int v, unsigned char n, MagnitudeEtDirection *md) {
     int magnitude;
     if (v < 0) {
@@ -342,7 +295,7 @@ void modelePhysique(unsigned char nombreIterations) {
         for (t = 0; t < 5; t++) {
             // La constante 3 est calculée selon le poids de la voiture, les caractéristiques
             // du moteur, le rapport des pignons du différentiel, et une constante de temps.
-            vitesse += 3 * soustraitAmoinsB(&tableauDeBord.tensionMoyenne, &tableauDeBord.vitesseMesuree);
+            vitesse += 3 * compareAetB(&tableauDeBord.tensionMoyenne, &tableauDeBord.vitesseMesuree);
             convertitEntierEnMagnitudeEtDirection(vitesse, 5, &tableauDeBord.vitesseMesuree);
         }
     }    
@@ -400,7 +353,6 @@ void test_DEPLACEMENT_ATTEINT_si_deplacement_atteint() {
  * @return Nombre de tests en erreur.
  */
 void test_puissance() {
-    test_soustrait_MagnitudeEtDirection();
     test_pid_atteint_la_vitesse_demandee();
     test_pid_atteint_la_position_demandee();
     test_MOTEUR_TENSION_MOYENNE_a_chaque_VITESSE_MESUREE();

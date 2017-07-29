@@ -26,7 +26,13 @@
  * Décrit une manoeuvre.
  */
 typedef struct {
-    unsigned char deplacement;
+    /** Distance à parcourir. */
+    MagnitudeEtDirection distance;
+    
+    /** Vitesse de croisière. */
+    unsigned char vitesse;
+    
+    /** Orientation des roues. */
     unsigned char orientationRoues;
 } Manoeuvre;
 
@@ -34,12 +40,13 @@ typedef struct {
  * Liste des manoeuvres.
  */
 const Manoeuvre const manoeuvres[] = {
-    {NEUTRE + 95, NEUTRE +   0},      // Avance un peu.
-    {NEUTRE + 95, NEUTRE +  90},      // Quart de tour avant gauche
-    {NEUTRE + 95, NEUTRE -  90},      // Quart de tour avant droit
-    {NEUTRE - 95, NEUTRE +   0},      // Recule un peu.
-    {NEUTRE - 95, NEUTRE +  90},      // Quart de tour arrière gauche.
-    {NEUTRE - 95, NEUTRE -  90}       // Quart de tour arrière droit
+//      Direction ,Vit, Roues 
+    {{AVANT,   95}, 20,   0},     // Avance un peu.
+    {{AVANT,   95}, 20,  90},     // Quart de tour avant gauche
+    {{AVANT,   95}, 20, -90},     // Quart de tour avant droit
+    {{ARRIERE, 95}, 20,   0},     // Recule un peu.
+    {{ARRIERE, 95}, 20,  90},     // Quart de tour arrière gauche.
+    {{ARRIERE, 95}, 20, -90}      // Quart de tour arrière droit
 };
 
 /**
@@ -49,7 +56,7 @@ typedef enum {
     /** C'est la télécommande qui commande.*/
     MODE_TELECOMMANDE,
             
-    /** Mode autonome; on fait ce qu'on veut.*/
+    /** C'est le bus qui commande.*/
     MODE_BUS_DE_COMMANDES
 } BusOuTelecommande;
 
@@ -68,6 +75,11 @@ unsigned char tempsInactiviteTelecommande = TEMPS_INACTIVITE_TELECOMMANDE;
 unsigned char nombreDeManoeuvresAExecuter = 0;
 
 /**
+ * Indique la distance attendue pour compléter la manoeuvre.
+ */
+MagnitudeEtDirection distancePourCompleterManoeuvre = {INDETERMINEE, 0};
+
+/**
  * File de manoeuvres.
  */
 File fileManoeuvres;
@@ -81,11 +93,16 @@ void reinitialiseManoeuvres() {
     i2cExposeValeur(LECTURE_I2C_NOMBRE_DE_MANOEUVRES, 0);
 }
 
+/**
+ * Réinitialise le module de direction.
+ * Y compris la file des manoeuvres.
+ */
 void initialiseDirection() {
     reinitialiseManoeuvres();
     busOuTelecommande = MODE_TELECOMMANDE;
     tempsInactiviteTelecommande = TEMPS_INACTIVITE_TELECOMMANDE;
 }
+
 /**
  * Exécute la manoeuvre indiquée en plaçant les événements nécessaires.
  * @param numeroDeManoeuvre Le numéro de manoeuvre.
@@ -94,8 +111,9 @@ void executeManoeuvre(unsigned char numeroDeManoeuvre) {
     Manoeuvre const *manoeuvre;
 
     manoeuvre = &manoeuvres[numeroDeManoeuvre];
-    enfileEvenement(DEPLACEMENT_DEMANDE, manoeuvre->deplacement);
+    
     enfileEvenement(LECTURE_RC_GAUCHE_DROITE, manoeuvre->orientationRoues);        
+    enfileEvenement(VITESSE_DEMANDEE, manoeuvre->vitesse);    
 }
 
 /**
@@ -115,59 +133,54 @@ void defileManoeuvre() {
 }
 
 /**
- * Ajoute une nouvelle manoeuvre à la file, et l'exécute immédiatement
- * si il n'y en a aucune en cours.
+ * Ajoute une nouvelle manoeuvre à la file.
  * @param numeroDeManoeuvre Le numéro de manoeuvre.
  */
 void enfileManoeuvre(unsigned char numeroDeManoeuvre) {
     i2cExposeValeur(LECTURE_I2C_DERNIERE_MANOEUVRE_RECUE, numeroDeManoeuvre);
-    if (nombreDeManoeuvresAExecuter == 0) {
-        executeManoeuvre(numeroDeManoeuvre);
-        nombreDeManoeuvresAExecuter = 1;
-    } else {
-        fileEnfile(&fileManoeuvres, numeroDeManoeuvre);            
-        nombreDeManoeuvresAExecuter ++;
-    }
+    fileEnfile(&fileManoeuvres, numeroDeManoeuvre);            
+    nombreDeManoeuvresAExecuter ++;
     i2cExposeValeur(LECTURE_I2C_NOMBRE_DE_MANOEUVRES, nombreDeManoeuvresAExecuter);
 }
 
-/**
- * Calcule la forme du signal PWM à produire pour positionner les roues avant
- * à la position indiquée.
- * @param position Position des roues avant, entre 0 et 255. 128 est neutre.
- */
-void calculePwmServoRouesAvant(unsigned char position) {
-    unsigned int x = position;
-    x <<= 3;
-    x += 2000;
-    tableauDeBord.positionRouesAvant.tempsBas.valeur = 25535 + x;
-    tableauDeBord.positionRouesAvant.tempsHaut.valeur = (unsigned int) 65535 - x;
+void gereManoeuvre(MagnitudeEtDirection *vitesseMesuree) {
+    unsigned char numeroDeManoeuvre;
+    Manoeuvre const *manoeuvre;
+    
+    if (opereAmoinsB(&distancePourCompleterManoeuvre, vitesseMesuree)) {
+        numeroDeManoeuvre = fileDefile(&fileManoeuvres);
+        manoeuvre = &manoeuvres[numeroDeManoeuvre];
+        opereAplusB(&distancePourCompleterManoeuvre, &(manoeuvre->distance));
+        enfileMessageInterne()
+    }
 }
-
 /**
- * Reçoit les commandes d'écriture en provenance du bus I2C.
+ * Reçoit les commandes en provenance du bus I2C.
  * Ignore les commandes si c'est la télécommande qui a le contrôle.
+ * Les commandes de vitesse et direction vident la file de manoeuvres
+ * et annulent la manoeuvre en cours.
  * @param adresse Adresse associée à la commande.
  * @param valeur Valeur associée à la commande.
  */
 void receptionBus(unsigned char adresse, unsigned char valeur) {
-    static unsigned char n = 0;
-    i2cExposeValeur(LECTURE_I2C_N, ++n);
     if (busOuTelecommande == MODE_BUS_DE_COMMANDES) {
         switch(adresse) {
+            
             case ECRITURE_I2C_VITESSE:
                 reinitialiseManoeuvres();
                 enfileEvenement(VITESSE_DEMANDEE, valeur);
                 break;
+                
             case ECRITURE_I2C_DIRECTION:
                 reinitialiseManoeuvres();
                 enfileEvenement(LECTURE_RC_GAUCHE_DROITE, valeur);    
                 break;
+                
             case ECRITURE_I2C_MANOEUVRE:
                 enfileManoeuvre(valeur);
                 break;
+                
             default:
-                n--;
                 break;
         }
     }
@@ -204,7 +217,6 @@ void receptionTelecommande(Evenement evenement, unsigned char valeur) {
         case MODE_TELECOMMANDE:
             if (valeurTelecommandeEstPasNeutre(valeur)) {
                 tempsInactiviteTelecommande = TEMPS_INACTIVITE_TELECOMMANDE;
-                i2cExposeValeur(LECTURE_I2C_INACTIVITE_TELECOMMANDE, tempsInactiviteTelecommande);
             }
             enfileEvenement(evenement, valeur);    
             break;
@@ -230,6 +242,19 @@ void receptionTelecommandeGaucheDroite(unsigned char valeur) {
 }
 
 /**
+ * Calcule la forme du signal PWM à produire pour positionner les roues avant
+ * à la position indiquée.
+ * @param position Position des roues avant, entre 0 et 255. 128 est neutre.
+ */
+void calculePwmServoRouesAvant(unsigned char position) {
+    unsigned int x = position;
+    x <<= 3;
+    x += 2000;
+    tableauDeBord.positionRouesAvant.tempsBas.valeur = 25535 + x;
+    tableauDeBord.positionRouesAvant.tempsHaut.valeur = (unsigned int) 65535 - x;
+}
+
+/**
  * Machine à états pour gérer la direction de la voiture.
  * @param ev Événement à traiter.
  */
@@ -247,6 +272,12 @@ void DIRECTION_machine(EvenementEtValeur *ev) {
             
         case LECTURE_RC_GAUCHE_DROITE:
             calculePwmServoRouesAvant(ev->valeur);
+            break;
+            
+        case VITESSE_MESUREE:
+            if (nombreDeManoeuvresAExecuter > 0) {
+                gereManoeuvre(&tableauDeBord.vitesseMesuree);
+            }
             break;
     }
 }
@@ -381,7 +412,7 @@ void execute_immediatement_la_premiere_manoeuvre() {
 
     evenementEtValeur = defileEvenement();
     verifieEgalite("DIR_MAP0", evenementEtValeur->evenement, DEPLACEMENT_DEMANDE);
-    verifieEgalite("DIR_MAP1", evenementEtValeur->valeur, manoeuvres[1].deplacement);
+    verifieEgalite("DIR_MAP1", evenementEtValeur->valeur, 3);//manoeuvres[1].distance);
     
     evenementEtValeur = defileEvenement();
     verifieEgalite("DIR_MAP2", evenementEtValeur->evenement, LECTURE_RC_GAUCHE_DROITE);
@@ -409,7 +440,7 @@ void execute_la_suivante_manoeuvre_apres_avoir_complete_la_premiere() {
     
     evenementEtValeur = defileEvenement();
     verifieEgalite("DIR_MASU03", evenementEtValeur->evenement, DEPLACEMENT_DEMANDE);
-    verifieEgalite("DIR_MASU04", evenementEtValeur->valeur, manoeuvres[2].deplacement);
+    verifieEgalite("DIR_MASU04", evenementEtValeur->valeur, 3);//manoeuvres[2].distance);
     evenementEtValeur = defileEvenement();
     verifieEgalite("DIR_MASU05", evenementEtValeur->evenement, LECTURE_RC_GAUCHE_DROITE);
     verifieEgalite("DIR_MASU06", evenementEtValeur->valeur, manoeuvres[2].orientationRoues);

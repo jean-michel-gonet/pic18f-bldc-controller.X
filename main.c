@@ -349,6 +349,7 @@ void main() {
     ANSELB = 0x00;
     ANSELC = 0x00;
     
+    test_domaine();
     test_tableauDeBord();
     test_evenements();
     test_puissance();
