@@ -133,10 +133,10 @@ void executeManoeuvre(unsigned char numeroDeManoeuvre) {
     opereAplusB(&distancePourCompleterManoeuvre, &(manoeuvre->distance));
     switch(manoeuvre->distance.direction) {
         case ARRIERE:
-            enfileMessageInterne(VITESSE_DEMANDEE, 128 - manoeuvre->vitesse);
+            enfileMessageInterne(VITESSE_DEMANDEE, NEUTRE - manoeuvre->vitesse);
             break;
         case AVANT:
-            enfileMessageInterne(VITESSE_DEMANDEE, manoeuvre->vitesse);
+            enfileMessageInterne(VITESSE_DEMANDEE, NEUTRE + manoeuvre->vitesse);
             break;
     }
     enfileMessageInterne(LECTURE_RC_GAUCHE_DROITE, manoeuvre->orientationRoues);
@@ -167,7 +167,7 @@ void defileManoeuvre() {
         etatManoeuvre = PAS_DE_MANOEUVRE;
         nombreDeManoeuvresAExecuter = 0;
         enfileMessageInterne(VITESSE_DEMANDEE, NEUTRE);
-        enfileMessageInterne(LECTURE_RC_GAUCHE_DROITE, 0);
+        enfileMessageInterne(LECTURE_RC_GAUCHE_DROITE, NEUTRE);
     }
     i2cExposeValeur(LECTURE_I2C_NOMBRE_DE_MANOEUVRES, nombreDeManoeuvresAExecuter);
 }
@@ -433,7 +433,7 @@ void execute_immediatement_la_premiere_manoeuvre() {
 
     evenementEtValeur = defileMessageInterne();
     verifieEgalite("DIR_MAP0", evenementEtValeur->evenement, VITESSE_DEMANDEE);
-    verifieEgalite("DIR_MAP1", evenementEtValeur->valeur, manoeuvres[1].vitesse);
+    verifieEgalite("DIR_MAP1", evenementEtValeur->valeur, NEUTRE + manoeuvres[1].vitesse);
     
     evenementEtValeur = defileMessageInterne();
     verifieEgalite("DIR_MAP2", evenementEtValeur->evenement, LECTURE_RC_GAUCHE_DROITE);
@@ -466,7 +466,7 @@ void execute_la_suivante_manoeuvre_apres_avoir_complete_la_premiere() {
     DIRECTION_machine(&ev);
     evenementEtValeur = defileMessageInterne();
     verifieEgalite("DIR_MASU03", evenementEtValeur->evenement, VITESSE_DEMANDEE);
-    verifieEgalite("DIR_MASU04", evenementEtValeur->valeur, manoeuvres[2].vitesse);
+    verifieEgalite("DIR_MASU04", evenementEtValeur->valeur, NEUTRE + manoeuvres[2].vitesse);
     evenementEtValeur = defileMessageInterne();
     verifieEgalite("DIR_MASU05", evenementEtValeur->evenement, LECTURE_RC_GAUCHE_DROITE);
     verifieEgalite("DIR_MASU06", evenementEtValeur->valeur, manoeuvres[2].orientationRoues);
