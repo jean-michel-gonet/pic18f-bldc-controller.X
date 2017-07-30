@@ -10,29 +10,11 @@
 
 #undef NO_PID
 
-typedef enum {
-    /**
-     * En mode déplacement, le module de puissance est piloté par la vitesse
-     * demandée. L'erreur I est toujours zéro.
-     */
-    MODE_PID_DEPLACEMENT,
-    /**
-     * En mode manoeuvre, le module de puissance est piloté par l'erreur I. La
-     * vitesse demandée est toujours zéro.
-     */
-    MODE_PID_MANOEUVRE
-} ModePID;
-
 /** 
  * La tension moyenne maximum peut varier si la tension d'alimentation
  * tombe en dessous d'un certain seuil.
  */
 static int tensionMoyenneMax = TENSION_MOYENNE_MAX;
-
-/**
- * Le mode actuel du module de puissance.
- */
-static ModePID modePID = MODE_PID_DEPLACEMENT;
 
 /**
  * En mode manoeuvre, la vitesse demandée est toujours zéro.
@@ -76,15 +58,11 @@ void pidTensionMoyenne(MagnitudeEtDirection *vitesseMesuree,
     int magnitude;
 
     // Calcule l'erreur P:
-    if (modePID == MODE_PID_DEPLACEMENT) {
-        erreurP = compareAetB(vitesseDemandee, vitesseMesuree);
-    } else {
-        erreurP = compareAetB(&vitesseZero, vitesseMesuree);
-    }
+    erreurP = compareAetB(vitesseDemandee, vitesseMesuree);
     correction  = erreurP * P;
 
     // Calcule l'erreur I:
-    if (modePID == MODE_PID_MANOEUVRE) {
+    if (vitesseDemandee->magnitude == 0) {
         erreurI += erreurP;
         if (nouvelleErreurI < -800) {
             nouvelleErreurI = -800;
@@ -201,13 +179,6 @@ void PUISSANCE_machine(EvenementEtValeur *ev) {
 
         case VITESSE_DEMANDEE:
             evalueVitesseDemandee(ev->valeur, &vitesseDemandee);
-            modePID = MODE_PID_DEPLACEMENT;
-            break;
-            
-        case DEPLACEMENT_DEMANDE:
-            modePID = MODE_PID_MANOEUVRE;
-            erreurI = ev->valeur - 127;
-            erreurI *= 2;
             break;
     }
 }

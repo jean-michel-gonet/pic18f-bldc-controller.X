@@ -62,9 +62,6 @@ typedef enum EVENEMENT {
     /** La vitesse actuelle du moteur a été mesurée. */
     VITESSE_MESUREE,
             
-    /** Demande de déplacement de la voiture. */
-    DEPLACEMENT_DEMANDE,
-            
 } Evenement;
 
 /** Pour indiquer le signe d'une magnitude absolue.*/
