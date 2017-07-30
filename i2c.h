@@ -30,7 +30,7 @@ unsigned char i2cValeursExposees[I2C_MASQUE_ADRESSES_LOCALES + 1];
 
 typedef void (*I2cRappelCommande)(unsigned char, unsigned char);
 void i2cRappelCommande(I2cRappelCommande r);
-void i2cExposeValeur(unsigned char adresse, unsigned char valeur);
+void reentrant i2cExposeValeur(unsigned char adresse, unsigned char valeur);
 void i2cPrepareCommandePourEmission(I2cAdresse adresse, unsigned char valeur);
 unsigned char i2cDonneesDisponiblesPourEmission();
 unsigned char i2cRecupereCaracterePourEmission();

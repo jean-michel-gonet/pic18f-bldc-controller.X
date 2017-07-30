@@ -10,6 +10,13 @@
 #define CCPR_MIN 0
 
 /**
+ * Position centrale d'un potentiomètre, télécommande, etc.
+ * Utilisé pour transformer des variables positives entre 0 et 255 en
+ * variables signées entre -128 et +127.
+ */
+#define NEUTRE 128 
+
+/**
  * Liste des événements du système.
  */
 typedef enum EVENEMENT {

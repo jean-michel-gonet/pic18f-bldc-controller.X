@@ -31,17 +31,13 @@ typedef struct {
     /** Position du volant (CHANGEMENT_POSITION_ROUES_AVANT). */
     GenerateurPWMServo positionRouesAvant;
     
-    /** Indique que la dernière manoeuvre demandée par I2C est terminée. */
-    unsigned char deplacementAtteint;
-    
 } TableauDeBord;
 
 /** Le tableau de bord est une variable globale. */
 TableauDeBord tableauDeBord = {
     {INDETERMINEE, 0},              // Vitesse mesurée.
     {INDETERMINEE, 0},              // Tension moyenne à appliquer.
-    {65535 - 3000, 65535 - 37000},  // Position des roues avant.
-    0                               // Déplacement pas atteint.
+    {65535 - 3000, 65535 - 37000}   // Position des roues avant.
 };
 
 /**

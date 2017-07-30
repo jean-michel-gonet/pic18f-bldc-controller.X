@@ -41,7 +41,7 @@ unsigned char opereAmoinsB(MagnitudeEtDirection *a,
         case AVANT:
             switch (b->direction) {
                 case AVANT:
-                    if (a->magnitude < b->magnitude) {
+                    if (a->magnitude <= b->magnitude) {
                         a->magnitude = b->magnitude - a->magnitude;
                         a->direction = ARRIERE;
                         return TRUE;
@@ -64,7 +64,7 @@ unsigned char opereAmoinsB(MagnitudeEtDirection *a,
                     return FALSE;
                     
                 case ARRIERE:
-                    if (a->magnitude < b->magnitude) {
+                    if (a->magnitude <= b->magnitude) {
                         a->magnitude = b->magnitude - a->magnitude;
                         a->direction = AVANT;
                         return TRUE;

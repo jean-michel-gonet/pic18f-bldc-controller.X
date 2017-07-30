@@ -157,12 +157,6 @@ void low_priority interrupt interruptionsBassePriorite() {
             tempsMesureVitesse = TEMPS_BASE_DE_TEMPS;
         }
 
-        // Déplacement atteint:
-        if (tableauDeBord.deplacementAtteint) {
-            tableauDeBord.deplacementAtteint = 0;
-            defileManoeuvre();
-        }
-
         // Événement PHASE:
         hall = PORTA & 7;
         if (hall != hall0) {

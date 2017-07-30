@@ -85,24 +85,13 @@ void pidTensionMoyenne(MagnitudeEtDirection *vitesseMesuree,
 
     // Calcule l'erreur I:
     if (modePID == MODE_PID_MANOEUVRE) {
-        nouvelleErreurI = erreurI + erreurP;
-        // Détecte le passage par zéro:
-        if (nouvelleErreurI <= 0) {
-            if (erreurI > 0) {
-                tableauDeBord.deplacementAtteint = 255;            
-                if (nouvelleErreurI < -800) {
-                    nouvelleErreurI = -800;
-                }
-            }
-        } else {
-            if (erreurI <= 0) {
-                tableauDeBord.deplacementAtteint = 255;            
-                if (nouvelleErreurI > 800) {
-                    nouvelleErreurI = 800;
-                }
-            }
+        erreurI += erreurP;
+        if (nouvelleErreurI < -800) {
+            nouvelleErreurI = -800;
         }
-        erreurI = nouvelleErreurI;
+        if (nouvelleErreurI > 800) {
+            nouvelleErreurI = 800;
+        }
         correction += erreurI * I;
     } else {
         erreurI = 0;
@@ -150,17 +139,15 @@ void pidTensionMoyenne(MagnitudeEtDirection *vitesseMesuree,
  */
 void evalueVitesseDemandee(unsigned char lecture, 
                            MagnitudeEtDirection *vitesseDemandee) {
-    signed char v = (signed char) (lecture - 128);
+    signed char v = (signed char) (lecture - NEUTRE);
     
     if (v < 0) {
         vitesseDemandee->direction = ARRIERE;
         if (v == -128) {
             vitesseDemandee->magnitude = 255;
             return;
-        } else {
-            vitesseDemandee->magnitude = -v;
         }
-        
+        vitesseDemandee->magnitude = -v;
     } else {
         vitesseDemandee->direction = AVANT;
         if (v == 127) {
@@ -168,7 +155,7 @@ void evalueVitesseDemandee(unsigned char lecture,
             return;
         }
         vitesseDemandee->magnitude = v;
-    }
+     }
     if (vitesseDemandee->magnitude < 5) {
         vitesseDemandee->magnitude = 0;
     }
@@ -229,11 +216,11 @@ void PUISSANCE_machine(EvenementEtValeur *ev) {
 void test_evalue_la_vitesse_demandee() {
     MagnitudeEtDirection vitesseDemandee;
     
-    evalueVitesseDemandee(128 + 30, &vitesseDemandee);
+    evalueVitesseDemandee(NEUTRE + 30, &vitesseDemandee);
     verifieEgalite("PEV01", vitesseDemandee.direction, AVANT);
     verifieEgalite("PEV02", vitesseDemandee.magnitude, 60);
 
-    evalueVitesseDemandee(128 - 30, &vitesseDemandee);
+    evalueVitesseDemandee(NEUTRE - 30, &vitesseDemandee);
     verifieEgalite("PEV11", vitesseDemandee.direction, ARRIERE);
     verifieEgalite("PEV12", vitesseDemandee.magnitude, 60);
 
@@ -242,8 +229,8 @@ void test_evalue_la_vitesse_demandee() {
     verifieEgalite("PEV22", vitesseDemandee.magnitude, 255);
 
     evalueVitesseDemandee(255, &vitesseDemandee);
-    verifieEgalite("PEV21", vitesseDemandee.direction, AVANT);
-    verifieEgalite("PEV22", vitesseDemandee.magnitude, 255);
+    verifieEgalite("PEV31", vitesseDemandee.direction, AVANT);
+    verifieEgalite("PEV32", vitesseDemandee.magnitude, 255);
 }
 void test_limite_la_tension_moyenne_maximum() {
     int n;
@@ -302,7 +289,7 @@ void modelePhysique(unsigned char nombreIterations) {
 }
 
 void test_pid_atteint_la_vitesse_demandee() {
-    EvenementEtValeur ev = {VITESSE_DEMANDEE, 128 + 50};
+    EvenementEtValeur ev = {VITESSE_DEMANDEE, NEUTRE + 50};
     
     reinitialisePid();
     PUISSANCE_machine(&ev);
@@ -311,7 +298,7 @@ void test_pid_atteint_la_vitesse_demandee() {
     verifieEgalite("PIDV01", tableauDeBord.vitesseMesuree.magnitude, 50 * 2);
 }
 void test_pid_atteint_la_position_demandee() {
-    EvenementEtValeur ev = {DEPLACEMENT_DEMANDE, 128 + 50};
+    EvenementEtValeur ev = {DEPLACEMENT_DEMANDE, NEUTRE + 50};
     
     reinitialisePid();
     tableauDeBord.vitesseMesuree.direction = AVANT;
@@ -345,7 +332,6 @@ void test_DEPLACEMENT_ATTEINT_si_deplacement_atteint() {
     erreurI = 0;
     PUISSANCE_machine(&evVitesseMesuree);
     verifieEgalite("PID_DA01", defileMessageInterne()->evenement, MOTEUR_TENSION_MOYENNE);
-    verifieEgalite("PID_DA02", tableauDeBord.deplacementAtteint, 255);
 }
 
 /**
