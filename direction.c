@@ -92,7 +92,7 @@ File fileManoeuvres;
 /**
  * Vide la file des manoeuvres.
  */
-void reentrant reinitialiseManoeuvres() {
+void reinitialiseManoeuvres() {
     fileReinitialise(&fileManoeuvres);
     nombreDeManoeuvresAExecuter = 0;
     etatManoeuvre = PAS_DE_MANOEUVRE;
@@ -116,10 +116,12 @@ void initialiseDirection() {
  * @param numeroDeManoeuvre Le numéro de manoeuvre.
  */
 void enfileManoeuvre(unsigned char numeroDeManoeuvre) {
-    i2cExposeValeur(LECTURE_I2C_DERNIERE_MANOEUVRE_RECUE, numeroDeManoeuvre);
-    fileEnfile(&fileManoeuvres, numeroDeManoeuvre);            
-    nombreDeManoeuvresAExecuter ++;
-    i2cExposeValeur(LECTURE_I2C_NOMBRE_DE_MANOEUVRES, nombreDeManoeuvresAExecuter);
+    if (!fileEstPleine(&fileManoeuvres)) {
+        i2cExposeValeur(LECTURE_I2C_DERNIERE_MANOEUVRE_RECUE, numeroDeManoeuvre);
+        fileEnfile(&fileManoeuvres, numeroDeManoeuvre);            
+        nombreDeManoeuvresAExecuter ++;
+        i2cExposeValeur(LECTURE_I2C_NOMBRE_DE_MANOEUVRES, nombreDeManoeuvresAExecuter);
+    }
 }
 
 /**
@@ -167,7 +169,6 @@ void defileManoeuvre() {
         etatManoeuvre = PAS_DE_MANOEUVRE;
         nombreDeManoeuvresAExecuter = 0;
         enfileMessageInterne(VITESSE_DEMANDEE, NEUTRE);
-        enfileMessageInterne(LECTURE_RC_GAUCHE_DROITE, NEUTRE);
     }
     i2cExposeValeur(LECTURE_I2C_NOMBRE_DE_MANOEUVRES, nombreDeManoeuvresAExecuter);
 }
@@ -502,6 +503,16 @@ void execute_un_arret_apres_avoir_complete_la_derniere_manoeuvre() {
     verifieEgalite("DIR_MAAR01", evenementEtValeur->evenement, VITESSE_DEMANDEE);
     verifieEgalite("DIR_MAAR02", evenementEtValeur->valeur, NEUTRE);
 }
+void ignore_les_manoeuvres_si_la_file_deborde() {
+    unsigned char n;
+    reinitialiseManoeuvres();
+    for(n = 0; n < FILE_TAILLE; n++) {
+        receptionBus(2, 1);    
+    }
+    verifieEgalite("DIR_MAD01", nombreDeManoeuvresAExecuter, FILE_TAILLE);
+    receptionBus(2, 1);    
+    verifieEgalite("DIR_MAD02", nombreDeManoeuvresAExecuter, FILE_TAILLE);    
+}
 
 void reinitialise_les_manoeuvres_si_commande_de_vitesse() {
     reinitialiseManoeuvres();
@@ -584,6 +595,7 @@ void test_direction() {
     execute_immediatement_la_premiere_manoeuvre();
     execute_la_suivante_manoeuvre_apres_avoir_complete_la_premiere();
     execute_un_arret_apres_avoir_complete_la_derniere_manoeuvre();
+    ignore_les_manoeuvres_si_la_file_deborde();
     reinitialise_les_manoeuvres_si_commande_de_vitesse();
     reinitialise_les_manoeuvres_si_commande_de_orientation_des_roues();
     reinitialise_les_manoeuvres_si_telecommande();

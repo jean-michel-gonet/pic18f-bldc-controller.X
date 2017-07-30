@@ -268,19 +268,6 @@ void test_pid_atteint_la_vitesse_demandee() {
     modelePhysique(100);
     verifieEgalite("PIDV01", tableauDeBord.vitesseMesuree.magnitude, 50 * 2);
 }
-void test_pid_atteint_la_position_demandee() {
-    EvenementEtValeur ev = {DEPLACEMENT_DEMANDE, NEUTRE + 50};
-    
-    reinitialisePid();
-    tableauDeBord.vitesseMesuree.direction = AVANT;
-    tableauDeBord.vitesseMesuree.magnitude = 10;
-    PUISSANCE_machine(&ev);
-    
-    modelePhysique(100);
-
-    verifieEgalite("PIDP1", erreurI, 0);
-    verifieEgalite("PIDP2", tableauDeBord.vitesseMesuree.magnitude, 0);
-}
 void test_MOTEUR_TENSION_MOYENNE_a_chaque_VITESSE_MESUREE() {
     EvenementEtValeur evVitesseDemandee = {VITESSE_DEMANDEE, 150};
     EvenementEtValeur evVitesseMesuree = {VITESSE_MESUREE, 128};
@@ -293,17 +280,6 @@ void test_MOTEUR_TENSION_MOYENNE_a_chaque_VITESSE_MESUREE() {
         verifieEgalite("PID_TENSM", defileMessageInterne()->evenement, MOTEUR_TENSION_MOYENNE);
     }
 }
-void test_DEPLACEMENT_ATTEINT_si_deplacement_atteint() {
-    EvenementEtValeur evDeplacementDemande = {DEPLACEMENT_DEMANDE, 128};
-    EvenementEtValeur evVitesseMesuree = {VITESSE_MESUREE, 128};
-    
-    reinitialisePid();
-    initialiseMessagesInternes();
-    PUISSANCE_machine(&evDeplacementDemande);
-    erreurI = 0;
-    PUISSANCE_machine(&evVitesseMesuree);
-    verifieEgalite("PID_DA01", defileMessageInterne()->evenement, MOTEUR_TENSION_MOYENNE);
-}
 
 /**
  * Tests unitaires pour le calcul de tension.
@@ -311,9 +287,7 @@ void test_DEPLACEMENT_ATTEINT_si_deplacement_atteint() {
  */
 void test_puissance() {
     test_pid_atteint_la_vitesse_demandee();
-    test_pid_atteint_la_position_demandee();
     test_MOTEUR_TENSION_MOYENNE_a_chaque_VITESSE_MESUREE();
-    test_DEPLACEMENT_ATTEINT_si_deplacement_atteint();
     test_evalue_la_vitesse_demandee();
     test_limite_la_tension_moyenne_maximum();
 }

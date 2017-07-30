@@ -20,11 +20,11 @@ typedef struct {
     char filePleine;
 } File;
 
-void reentrant fileEnfile(File *file, char c);
+void fileEnfile(File *file, char c);
 char fileDefile(File *file);
 char fileEstVide(File *file);
 char fileEstPleine(File *file);
-void reentrant fileReinitialise(File *file);
+void fileReinitialise(File *file);
 
 #ifdef TEST
 int test_file();

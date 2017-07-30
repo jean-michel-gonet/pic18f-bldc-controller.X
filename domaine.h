@@ -35,9 +35,6 @@ typedef enum EVENEMENT {
     /** La tension moyenne à appliquer au moteur à changé. */
     MOTEUR_TENSION_MOYENNE,
             
-            /***/
-    MOTEUR_PWM,
-
     /** Lecture du potentiomètre.*/
     LECTURE_POTENTIOMETRE,
     

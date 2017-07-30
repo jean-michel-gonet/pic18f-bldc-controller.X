@@ -148,7 +148,7 @@ unsigned char convertitEnAdresseLocale(unsigned char adresse) {
  * demandée par le maître).
  * @param valeur La valeur.
  */
-void reentrant i2cExposeValeur(unsigned char adresse, unsigned char valeur) {
+void i2cExposeValeur(unsigned char adresse, unsigned char valeur) {
     i2cValeursExposees[adresse & I2C_MASQUE_ADRESSES_LOCALES] = valeur;
 }
 

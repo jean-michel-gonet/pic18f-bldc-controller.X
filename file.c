@@ -5,7 +5,7 @@
  * Si il y a de la place dans la file, enfile un caractère.
  * @param c Le caractère.
  */
-void reentrant fileEnfile(File *file, char c) {
+void fileEnfile(File *file, char c) {
     file->fileVide = 0;
     if (!file->filePleine) {
         file->file[file->fileEntree++] = c;
@@ -55,11 +55,12 @@ char fileEstPleine(File *file) {
 /**
  * Vide et réinitialise la file.
  */
-void reentrant fileReinitialise(File *file) {
+void fileReinitialise(File *file) {
     file->fileEntree = 0;
     file->fileSortie = 0;
     file->fileVide = 255;
     file->filePleine = 0;
+    
 }
 
 #ifdef TEST
