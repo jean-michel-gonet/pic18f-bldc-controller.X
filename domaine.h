@@ -56,15 +56,19 @@ typedef enum EVENEMENT {
     /** La vitesse demandée pour le moteur a été spécifiée / modifiée. */
     VITESSE_DEMANDEE,
 
-    /** La vitesse actuelle du moteur a été mesurée. */
+    /** Le déplacement demandé pour le moteur a été spécifié / modifié. */
+    DEPLACEMENT_DEMANDE,
+            
+    /** Le déplacement demandé est atteint. */
+    DEPLACEMENT_ATTEINT,
+            
+    /** La vitesse actuels du moteur a été mesurée. */
     VITESSE_MESUREE,
             
 } Evenement;
 
 /** Pour indiquer le signe d'une magnitude absolue.*/
 typedef enum DIRECTION {
-    /** La direction n'est pas connue. */
-    INDETERMINEE,
     /** Marche avant. */
     AVANT,
     /** Marche arrière. */
@@ -94,8 +98,10 @@ typedef struct {
     unsigned char magnitude;
 } MagnitudeEtDirection;
 
+void convertitEnMagnitudeEtDirection(unsigned char valeur, 
+                                     MagnitudeEtDirection *conversion);
 int compareAetB(MagnitudeEtDirection *a, 
-                     MagnitudeEtDirection *b);
+                MagnitudeEtDirection *b);
 unsigned char opereAmoinsB(MagnitudeEtDirection *a, 
                            MagnitudeEtDirection *b);
 unsigned char opereAplusB(MagnitudeEtDirection *a, 

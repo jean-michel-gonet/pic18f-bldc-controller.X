@@ -38,6 +38,8 @@
 #ifndef TEST
 
 #define TEMPS_BASE_DE_TEMPS 2656
+#define TEMPS_SOUS_DIVISIONS 50
+#define NOMBRE_DE_SOUS_DIVISIONS_DE_TEMPS 53
 
 typedef enum {
     TEMPS_HAUT,
@@ -90,6 +92,8 @@ void low_priority interrupt interruptionsBassePriorite() {
     unsigned char hall;
     static unsigned char hall0 = 0;
     static int tempsMesureVitesse = TEMPS_BASE_DE_TEMPS;
+    static unsigned char tempsSousDivisions = TEMPS_SOUS_DIVISIONS;
+    static unsigned char nombreSousDivisionsDeTemps = NOMBRE_DE_SOUS_DIVISIONS_DE_TEMPS;
     unsigned char mesureRc;
     static int mesureAdc = 0;
 
@@ -151,6 +155,13 @@ void low_priority interrupt interruptionsBassePriorite() {
     if (PIR1bits.TMR2IF) {
         PIR1bits.TMR2IF = 0;
 
+        if (-- tempsSousDivisions == 0) {
+            tempsSousDivisions = TEMPS_SOUS_DIVISIONS;
+            if (nombreSousDivisionsDeTemps > 0) {
+                nombreSousDivisionsDeTemps --;
+            }
+        }
+
         // Événement base de temps:
         if (-- tempsMesureVitesse == 0) {
             enfileEvenement(BASE_DE_TEMPS, 0);
@@ -160,6 +171,8 @@ void low_priority interrupt interruptionsBassePriorite() {
         // Événement PHASE:
         hall = PORTA & 7;
         if (hall != hall0) {
+            tableauDeBord.tempsDeDeplacement = nombreSousDivisionsDeTemps;
+            nombreSousDivisionsDeTemps = NOMBRE_DE_SOUS_DIVISIONS_DE_TEMPS;
             enfileEvenement(MOTEUR_PHASE, hall);
             hall0 = hall;
         }

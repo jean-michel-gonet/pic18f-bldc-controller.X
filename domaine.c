@@ -1,6 +1,38 @@
 #include "domaine.h"
 #include "test.h"
 
+
+/**
+ * Convertit la valeur et magnitude et direction.
+ * @param valeur Une valeur entre 0 et 255, normalement mesurée 
+ * du contrôle pertinent (potentiomètre, radio-commande, etc).
+ * @param conversion Le résultat de la conversion.
+ */
+void convertitEnMagnitudeEtDirection(unsigned char valeur, 
+                                     MagnitudeEtDirection *conversion) {
+    signed char v = (signed char) (valeur - NEUTRE);
+    
+    if (v < 0) {
+        conversion->direction = ARRIERE;
+        if (v == -128) {
+            conversion->magnitude = 255;
+            return;
+        }
+        conversion->magnitude = -v;
+    } else {
+        conversion->direction = AVANT;
+        if (v == 127) {
+            conversion->magnitude = 255;
+            return;
+        }
+        conversion->magnitude = v;
+     }
+    if (conversion->magnitude < 5) {
+        conversion->magnitude = 0;
+    }
+    conversion->magnitude <<= 1;
+}
+
 /**
  * Soustrait deux magnitudes en tenant compte de leur direction.
  * @param a Magnitude A
@@ -136,6 +168,26 @@ unsigned char opereAplusB(MagnitudeEtDirection *a,
 }
 
 #ifdef TEST
+
+void test_convertit_en_magnitude_et_direction() {
+    MagnitudeEtDirection vitesseDemandee;
+    
+    convertitEnMagnitudeEtDirection(NEUTRE + 30, &vitesseDemandee);
+    verifieEgalite("PEV01", vitesseDemandee.direction, AVANT);
+    verifieEgalite("PEV02", vitesseDemandee.magnitude, 60);
+
+    convertitEnMagnitudeEtDirection(NEUTRE - 30, &vitesseDemandee);
+    verifieEgalite("PEV11", vitesseDemandee.direction, ARRIERE);
+    verifieEgalite("PEV12", vitesseDemandee.magnitude, 60);
+
+    convertitEnMagnitudeEtDirection(0, &vitesseDemandee);
+    verifieEgalite("PEV21", vitesseDemandee.direction, ARRIERE);
+    verifieEgalite("PEV22", vitesseDemandee.magnitude, 255);
+
+    convertitEnMagnitudeEtDirection(255, &vitesseDemandee);
+    verifieEgalite("PEV31", vitesseDemandee.direction, AVANT);
+    verifieEgalite("PEV32", vitesseDemandee.magnitude, 255);
+}
 
 void test_compare_A_et_B() {
     MagnitudeEtDirection a,b;
@@ -275,6 +327,7 @@ void test_opere_A_plus_B() {
  * @return Nombre de tests en erreur.
  */
 void test_domaine() {
+    test_convertit_en_magnitude_et_direction();
     test_compare_A_et_B();
     test_opere_A_moins_B();
     test_opere_A_plus_B();

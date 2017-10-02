@@ -120,43 +120,37 @@ static unsigned char mesureDeVitessePhase0 = 0;
  * @param mesureDeVitesse Pour accumuler le nombre de phases détectées.
  */
 void mesureVitesse(unsigned char phase, MagnitudeEtDirection *mesureDeVitesse) {
-    Direction direction = INDETERMINEE;
     signed char step;
 
-    // Établit la direction de rotation:
     if (mesureDeVitessePhase0 != 0) {
+        // Établit la direction de rotation (le déplacement est toujours 1):
         step = mesureDeVitessePhase0 - phase;
         switch(step) {
             case -1:
             case 5:
-                direction = AVANT;
+                tableauDeBord.deplacementMesure.direction = AVANT;
+                tableauDeBord.deplacementMesure.magnitude = 1;
                 break;
 
             case 1:
             case -5:
-                direction = ARRIERE;
+                tableauDeBord.deplacementMesure.direction = ARRIERE;
+                tableauDeBord.deplacementMesure.magnitude = 1;
                 break;
+                
+            default:
+                tableauDeBord.deplacementMesure.magnitude = 0;
         }
+        // Incrémente la mesure de vitesse:
+        opereAplusB(mesureDeVitesse, &(tableauDeBord.deplacementMesure));
     }
-
     mesureDeVitessePhase0 = phase;
 
-    if (direction != INDETERMINEE) {
-        if ( (mesureDeVitesse->direction == INDETERMINEE) || (mesureDeVitesse->magnitude == 0) ) {
-            mesureDeVitesse->direction = direction;
-            mesureDeVitesse->magnitude = 1;
-        }
-        if (direction == mesureDeVitesse->direction) {
-            mesureDeVitesse->magnitude++;
-        } else {
-            mesureDeVitesse->magnitude--;
-        }
-    }
 }
 
 void MOTEUR_machine(EvenementEtValeur *ev) {
     static MagnitudeEtDirection *tensionMoyenne;
-    static MagnitudeEtDirection mesureDeVitesse = {0, INDETERMINEE};
+    static MagnitudeEtDirection mesureDeVitesse = {0, AVANT};
     static unsigned char phase;
 
     switch(ev->evenement) {
@@ -195,7 +189,7 @@ void test_phaseSelonHall() {
 }
 void test_mesureVitesseMarcheAvant() {
     unsigned char tour, phase;
-    MagnitudeEtDirection mesureDeVitesse = {INDETERMINEE, 0};
+    MagnitudeEtDirection mesureDeVitesse = {AVANT, 0};
     
     for (tour = 0; tour < 10; tour++) {
         for (phase = 1; phase <= 6; phase++) {
@@ -203,11 +197,11 @@ void test_mesureVitesseMarcheAvant() {
         }
     }
     verifieEgalite("MOMV_01", mesureDeVitesse.direction, AVANT);
-    verifieEgalite("MOMV_02", mesureDeVitesse.magnitude, 60);
+    verifieEgalite("MOMV_02", mesureDeVitesse.magnitude, 59);
 }
 void test_mesureVitesseMarcheArriere() {
     unsigned char tour, phase;
-    MagnitudeEtDirection mesureDeVitesse = {INDETERMINEE, 0};
+    MagnitudeEtDirection mesureDeVitesse = {AVANT, 0};
     
     for (tour = 0; tour < 10; tour++) {
         for (phase = 6; phase >0; phase--) {
@@ -215,10 +209,10 @@ void test_mesureVitesseMarcheArriere() {
         }
     }
     verifieEgalite("MOMV_11", mesureDeVitesse.direction, ARRIERE);
-    verifieEgalite("MOMV_12", mesureDeVitesse.magnitude, 60);
+    verifieEgalite("MOMV_12", mesureDeVitesse.magnitude, 59);
 }
 void test_mesureVitesseInversionMarche() {
-    MagnitudeEtDirection mesureDeVitesse = {INDETERMINEE, 0};
+    MagnitudeEtDirection mesureDeVitesse = {AVANT, 0};
     mesureDeVitessePhase0 = 6;
     
     mesureVitesse(1, &mesureDeVitesse);
@@ -353,7 +347,7 @@ void test_moteurMesureVitesse() {
     MOTEUR_machine(&ev);
 
     verifieEgalite("MOMEVE01", tableauDeBord.vitesseMesuree.direction, AVANT);
-    verifieEgalite("MOMEVE02", tableauDeBord.vitesseMesuree.magnitude, 3);
+    verifieEgalite("MOMEVE02", tableauDeBord.vitesseMesuree.magnitude, 2);
     verifieEgalite("MOMEVE03", defileMessageInterne()->evenement, VITESSE_MESUREE);
     verifieEgalite("MOMEVE04", defileMessageInterne()->evenement, 0);
 }
