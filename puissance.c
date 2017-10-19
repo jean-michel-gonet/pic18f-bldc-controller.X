@@ -1,3 +1,7 @@
+#ifdef TEST
+#include <math.h>
+#endif
+
 #include "puissance.h"
 #include "test.h"
 #include "tableauDeBord.h"
@@ -42,7 +46,7 @@ static MagnitudeEtDirection deplacementZero = {AVANT, 0};
 #define D_VITESSE 9
 
 #define P_DEPLACEMENT 1
-#define D_DEPLACEMENT 6
+#define D_DEPLACEMENT 10
 
 static int tensionMoyenne = 0;   // Tension moyenne, multipliée par 32
 static int erreurPrecedente = 0; // Erreur précédente, pour calculer D.
@@ -105,40 +109,70 @@ void regulateurVitesse(MagnitudeEtDirection *vitesseMesuree,
     corrigeTensionMoyenne(correction);
 }
 
+int correctionDeplacement = 0;
+
+void initialiseRegulateurDeDeplacement(unsigned char valeur) {
+    MagnitudeEtDirection magnitudeEtDirection;
+    convertitEnMagnitudeEtDirection(valeur, &magnitudeEtDirection);
+    opereAmoinsB(&(tableauDeBord.deplacementDemande), &magnitudeEtDirection);
+    switch (tableauDeBord.deplacementDemande.direction) {
+        case ARRIERE:
+            erreurPrecedente = - tableauDeBord.deplacementDemande.magnitude;
+            break;
+        case AVANT:
+            erreurPrecedente = tableauDeBord.deplacementDemande.magnitude;
+            break;
+    }
+}
+
 /**
  * Corrige la tension moyenne du {@link TableauDeBord} pour réduire l'erreur
  * de déplacement à zéro.
  * @param erreurDePosition Distance encore à parcourir.
  * @param tempsDeDeplacement Temps écoulé depuis la dernière mesure de distance.
+ * @return 0 tant que le déplacement demandé n'est pas atteint.
  */
-void regulateurDeplacement(MagnitudeEtDirection *deplacementDemande, 
+unsigned char regulateurDeplacement(MagnitudeEtDirection *deplacementMesure, 
                            unsigned char tempsDeDeplacement) {
-    static MagnitudeEtDirection zero = {0, AVANT};    
-    const unsigned char const div[50] = {
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 
-        4, 4, 5, 5, 6, 7, 8, 10, 12, 16, 25, 50
+    static const unsigned char const div[255] = {
+        0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+        1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 
+        2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 
+        6, 6, 6, 7, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 11, 11, 12, 12, 13, 
+        14, 15, 15, 17, 18, 19, 21, 23, 25, 28, 31, 36, 42, 51, 63, 85, 127, 
+        255
     };
-    
-    int erreurD;
-    int erreurP;
     int correction;
-
-    // Calcule l'erreur P:
-    erreurP = compareAetB(deplacementDemande, &zero);
-    correction  = erreurP * P_DEPLACEMENT;
     
-    // Calcule l'erreur D:
-    if (erreurP < erreurPrecedente) {
-        erreurD = -div[tempsDeDeplacement];
+    // Calcule la correction P:
+    if (deplacementMesure->magnitude == 1) {
+        switch (deplacementMesure->direction) {
+            case ARRIERE:
+                erreurPrecedente--;
+                correction = -D_DEPLACEMENT * div[tempsDeDeplacement];
+                break;
+            case AVANT:
+                erreurPrecedente++;
+                correction = +D_DEPLACEMENT * div[tempsDeDeplacement];
+                break;
+        }
     } else {
-        erreurD = div[tempsDeDeplacement];
+        correction = 0;
     }
-    erreurPrecedente = erreurP;
-    correction += erreurD * D_DEPLACEMENT;
-    
+    correction += erreurPrecedente * P_DEPLACEMENT;
+
     // Corrige la tension moyenne:
     corrigeTensionMoyenne(correction);
+    
+    // Met à jour le déplacement
+    return opereAplusB(&(tableauDeBord.deplacementDemande), 
+                             &(tableauDeBord.deplacementMesure));
 }
 
 /**
@@ -147,7 +181,6 @@ void regulateurDeplacement(MagnitudeEtDirection *deplacementDemande,
  * @param ev Événement à traiter.
  */
 void PUISSANCE_machine(EvenementEtValeur *ev) {
-    static MagnitudeEtDirection magnitudeEtDirection = {AVANT, 0};
     
     switch(ev->evenement) {
         case LECTURE_ALIMENTATION:
@@ -169,16 +202,22 @@ void PUISSANCE_machine(EvenementEtValeur *ev) {
                 enfileMessageInterne(MOTEUR_TENSION_MOYENNE, 0);
             }
             break;
-
+            
+        case DEPLACEMENT_ARRETE:
+            if (modePid == MODE_PID_DEPLACEMENT) {
+                regulateurDeplacement(&(tableauDeBord.deplacementMesure), 0);
+                enfileMessageInterne(MOTEUR_TENSION_MOYENNE, 0);
+            }
+            break;
+            
         case MOTEUR_PHASE:
             if (modePid == MODE_PID_DEPLACEMENT) {
-                if (opereAmoinsB(&(tableauDeBord.deplacementDemande), 
-                             &(tableauDeBord.deplacementMesure))) {
+                if (regulateurDeplacement(&(tableauDeBord.deplacementMesure), 
+                                      tableauDeBord.tempsDeDeplacement)) {
                     enfileMessageInterne(DEPLACEMENT_ATTEINT, 0);
+                } else {
+                    enfileMessageInterne(MOTEUR_TENSION_MOYENNE, 0);
                 }
-                regulateurDeplacement(&(tableauDeBord.deplacementDemande), 
-                                      tableauDeBord.tempsDeDeplacement);
-                enfileMessageInterne(MOTEUR_TENSION_MOYENNE, 0);
             }
             break;
 
@@ -189,8 +228,8 @@ void PUISSANCE_machine(EvenementEtValeur *ev) {
             
         case DEPLACEMENT_DEMANDE:
             modePid = MODE_PID_DEPLACEMENT;
-            convertitEnMagnitudeEtDirection(ev->valeur, &magnitudeEtDirection);
-            opereAmoinsB(&(tableauDeBord.deplacementDemande), &magnitudeEtDirection);
+            initialiseRegulateurDeDeplacement(ev->valeur);
+            break;
     }
 }
 
@@ -262,16 +301,122 @@ void test_pid_atteint_la_vitesse_demandee() {
     verifieEgalite("PIDV01", tableauDeBord.vitesseMesuree.magnitude, 50 * 2);
 }
 
+/**
+ * Calcule le temps qu'un mobile soumis à l'accélération et la vitesse
+ * indiquées met à parcourir la distance indiquée.
+ * @param acceleration Accélération.
+ * @param vitesse Vitesse.
+ * @param distance Distance à parcourir.
+ * @return Temps à parcourir la distance.
+ */
+float calculeTempsDePhase(float acceleration, float vitesse, float distance) {
+    float s;
+    
+	// Change le signe de la distance pour qu'il soit le même 
+	// que celui de la vitesse:
+	if (vitesse < 0) {
+		distance = -fabs(distance);
+	} else {
+		distance = fabs(distance);
+    }
+    
+	// Si l'accélération et la vitesse sont négligeables 
+	// par rapport à la distance:
+	if ( (fabs(acceleration) < fabs(distance / 100)) && (fabs(vitesse) < fabs(distance / 100)) ) {
+		return 100;
+	}
+		
+	// Si l'accélération est négligeable
+	// par rapport à la vitesse:
+	if (fabs(acceleration) < fabs(vitesse / 100)) {
+		return distance / vitesse;
+    }
+
+	// Si la vitesse est négligeable
+	// par rapport à l'accélération:
+	if  ( fabs(vitesse) < fabs(acceleration / 100)) {
+		return sqrt(2 * fabs(distance) / fabs(acceleration));
+    }
+
+	// Si la voiture change de direction avant de dépasser
+	// la distance de phase
+	s = vitesse * vitesse + 2 * acceleration * distance;
+	if (s < 0) {
+		return -2 * vitesse / acceleration;
+	} else {
+		// Résout l'équation quadratique en choisissant
+		// la bonne solution:
+		if (vitesse >= 0) {
+			return (-vitesse + sqrt(s)) / acceleration;
+		} else {
+			return (-vitesse - sqrt(s)) / acceleration;
+		}
+	}
+}
+
 void test_pid_atteint_le_deplacement_demande() {
     EvenementEtValeur deplacementDemande = {DEPLACEMENT_DEMANDE, NEUTRE + 50};
+    EvenementEtValeur deplacementArrete = {DEPLACEMENT_ARRETE, 0};
+    EvenementEtValeur moteurPhase = {MOTEUR_PHASE, 0};
+    int n;
+    float alpha, omega, delta;
+    float tau;
+    float tp;
+    float nt, ntt;
+    float u;
+
+    reinitialisePid();
+
     tableauDeBord.vitesseMesuree.direction = AVANT;
     tableauDeBord.vitesseMesuree.magnitude = 0;
-    reinitialisePid();
+    tableauDeBord.vitesseMesuree.direction = AVANT;
+    tableauDeBord.tensionMoyenne.magnitude = 0;
+    tableauDeBord.deplacementDemande.direction = AVANT;
+    tableauDeBord.deplacementDemande.magnitude = 0;
+
     PUISSANCE_machine(&deplacementDemande);
+    verifieEgalite("PIDD01", tableauDeBord.deplacementDemande.magnitude, 2 * 50);
+
+    omega = 0;
     
-    modelePhysique(100);
-    verifieEgalite("PIDD01", tableauDeBord.vitesseMesuree.magnitude, 0);
-    verifieEgalite("PIDD02", tableauDeBord.deplacementDemande.magnitude, 0);
+    for (n = 0; n < 100; n++) {
+        delta = 0;
+        nt = 255;
+        ntt = 255.0 / 1584.1;
+        do {
+            u = 7.2 * tableauDeBord.tensionMoyenne.magnitude / 255.0;
+
+            tau = 0.0613 * (u - omega / 230.4);
+            alpha = tau * 10333.2;
+            tp = calculeTempsDePhase(alpha, omega, 1.041) / 5.0;
+            if (tp > ntt) {
+                tp = ntt;
+            }
+            delta += tp * tp * alpha / 2.0 + tp * omega;
+            omega += alpha * tp;
+
+            ntt -= tp;
+            if (ntt <= 0) {
+                tableauDeBord.deplacementMesure.magnitude = 0;
+                PUISSANCE_machine(&deplacementArrete);
+                ntt = 255.0 / 1584.1;
+            }            
+            if (nt > 0) {
+                nt -= tp * 1584.1;
+            } 
+        } while (fabs(delta) < 1.041);
+        
+        tableauDeBord.deplacementMesure.magnitude = 1;
+        if (delta < 0) {
+            tableauDeBord.deplacementMesure.direction = ARRIERE;
+        } else {
+            tableauDeBord.deplacementMesure.direction = AVANT;
+        }
+        tableauDeBord.tempsDeDeplacement = (unsigned char) nt;
+        PUISSANCE_machine(&moteurPhase);
+    }
+    verifieEgalite("PIDD02", tableauDeBord.vitesseMesuree.magnitude, 0);
+    verifieEgalite("PIDD03", tableauDeBord.deplacementDemande.magnitude, 0);
 }
 
 void test_MOTEUR_TENSION_MOYENNE_a_chaque_VITESSE_MESUREE() {

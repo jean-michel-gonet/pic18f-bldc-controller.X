@@ -130,7 +130,7 @@ unsigned char opereAplusB(MagnitudeEtDirection *a,
                     return FALSE;
 
                 case ARRIERE:
-                    if (a->magnitude < b->magnitude) {
+                    if (a->magnitude <= b->magnitude) {
                         a->magnitude = b->magnitude - a->magnitude;
                         a->direction = ARRIERE;
                         return TRUE;
@@ -149,7 +149,7 @@ unsigned char opereAplusB(MagnitudeEtDirection *a,
                     return FALSE;
                     
                 case AVANT:
-                    if (a->magnitude < b->magnitude) {
+                    if (a->magnitude <= b->magnitude) {
                         a->magnitude = b->magnitude - a->magnitude;
                         a->direction = AVANT;
                         return TRUE;

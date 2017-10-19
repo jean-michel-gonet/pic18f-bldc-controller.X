@@ -222,10 +222,10 @@ void hardwareInitialise() {
     T1CONbits.TMR1ON = 1;       // Active le temporisateur 1
 
     // Temporisateur 2: PWM pour le moteur.
-    T2CONbits.T2CKPS = 1;       // Pas de division de fréquence.
-    T2CONbits.T2OUTPS = 0;      // Pas de division de fréquence.
+    T2CONbits.T2CKPS = 1;       // Diviseur de fréquence d'entrée 1:4
+    T2CONbits.T2OUTPS = 0;      // Pas de division de fréquence de sortie.
     T2CONbits.TMR2ON = 1;       // Active le temporisateur.
-    PR2 = 255;                  // Période max: 64MHz / (4 * 255) = 62kHz.
+    PR2 = 255;                  // Période max: 64MHz / (4 * 4 * 255) = 15.7 kHz.
     
     PIE1bits.TMR2IE = 1;        // Active les interruptions.
     IPR1bits.TMR2IP = 0;        // Interruptions de basse priorité.

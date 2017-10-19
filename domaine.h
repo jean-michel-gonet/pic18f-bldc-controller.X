@@ -58,7 +58,10 @@ typedef enum EVENEMENT {
 
     /** Le déplacement demandé pour le moteur a été spécifié / modifié. */
     DEPLACEMENT_DEMANDE,
-            
+    
+    /** Il n'y a pas eu de déplacement. */
+    DEPLACEMENT_ARRETE,
+
     /** Le déplacement demandé est atteint. */
     DEPLACEMENT_ATTEINT,
             
