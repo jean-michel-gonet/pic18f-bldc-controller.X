@@ -10,10 +10,36 @@ static File fileMessagesInternes;
 
 /**
  * Réinitialise la file des messages internes.
- * Utilisée pour les tests unitaires.
  */
 void initialiseMessagesInternes() {
     fileReinitialise(&fileMessagesInternes);
+}
+
+/**
+ * Réinitialise le tableau de bord et la file des messages internes.
+ */
+void initialiseTableauDeBord() {
+    initialiseMessagesInternes();
+    
+    tableauDeBord.vitesseMesuree.direction = AVANT;
+    tableauDeBord.vitesseMesuree.magnitude = 0;
+
+    tableauDeBord.vitesseDemandee.direction = AVANT;
+    tableauDeBord.vitesseDemandee.magnitude = 0;
+
+    tableauDeBord.deplacementMesure.direction = AVANT;
+    tableauDeBord.deplacementMesure.magnitude = 0;
+
+    tableauDeBord.deplacementDemande.direction = AVANT;
+    tableauDeBord.deplacementDemande.magnitude = 0;
+
+    tableauDeBord.tensionMoyenne.direction = AVANT;
+    tableauDeBord.tensionMoyenne.magnitude = 0;
+
+    tableauDeBord.positionRouesAvant.tempsBas.valeur = 65535 - 3000;
+    tableauDeBord.positionRouesAvant.tempsHaut.valeur = 65535 - 37000;
+    
+    tableauDeBord.tempsDeDeplacement = 0;
 }
 
 /**

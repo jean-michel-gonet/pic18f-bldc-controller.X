@@ -54,7 +54,7 @@ static int erreurPrecedente = 0; // Erreur précédente, pour calculer D.
 /**
  * Réinitialise le PID.
  */
-void reinitialisePid() {
+void initialisePid() {
     tensionMoyenne = 0;
     erreurPrecedente = 0;
 }
@@ -231,9 +231,8 @@ void PUISSANCE_machine(EvenementEtValeur *ev) {
                 if (regulateurDeplacement(&(tableauDeBord.deplacementMesure), 
                                       tableauDeBord.tempsDeDeplacement)) {
                     enfileMessageInterne(DEPLACEMENT_ATTEINT, 0);
-                } else {
-                    enfileMessageInterne(MOTEUR_TENSION_MOYENNE, 0);
                 }
+                enfileMessageInterne(MOTEUR_TENSION_MOYENNE, 0);
             }
             break;
 
@@ -250,32 +249,6 @@ void PUISSANCE_machine(EvenementEtValeur *ev) {
 }
 
 #ifdef TEST
-void test_limite_la_tension_moyenne_maximum() {
-    int n;
-    EvenementEtValeur evenementEtValeur;
-
-    reinitialisePid();
-
-    // Marche avant:
-    evenementEtValeur.evenement = VITESSE_DEMANDEE;
-    evenementEtValeur.valeur = 80;
-    PUISSANCE_machine(&evenementEtValeur);    
-
-    for (n = 0; n < 1000; n++) {
-        // Avertit que l'alimentation est trop basse:
-        evenementEtValeur.valeur = LECTURE_ALIMENTATION_MIN - 1;
-        evenementEtValeur.evenement = LECTURE_ALIMENTATION;
-        PUISSANCE_machine(&evenementEtValeur);    
-
-        // Indique que la voiture est bloquée, pour que le PID accélère:
-        evenementEtValeur.evenement = VITESSE_MESUREE;
-        evenementEtValeur.valeur = 0;
-        PUISSANCE_machine(&evenementEtValeur);            
-    }
-
-    // La tension moyenne de sortie est à zéro:
-    verifieEgalite("PMAX01", tableauDeBord.tensionMoyenne.magnitude, TENSION_MOYENNE_MAX_REDUITE/64);
-}
 
 void convertitEntierEnMagnitudeEtDirection(int v, unsigned char n, MagnitudeEtDirection *md) {
     int magnitude;
@@ -304,17 +277,6 @@ void modelePhysique(unsigned char nombreIterations) {
             convertitEntierEnMagnitudeEtDirection(vitesse, 5, &tableauDeBord.vitesseMesuree);
         }
     }    
-}
-
-void test_pid_atteint_la_vitesse_demandee() {
-    EvenementEtValeur vitesseDemandee = {VITESSE_DEMANDEE, NEUTRE + 50};
-    tableauDeBord.vitesseMesuree.direction = AVANT;
-    tableauDeBord.vitesseMesuree.magnitude = 0;
-    reinitialisePid();
-    PUISSANCE_machine(&vitesseDemandee);
-    
-    modelePhysique(100);
-    verifieEgalite("PIDV01", tableauDeBord.vitesseMesuree.magnitude, 50 * 2);
 }
 
 /**
@@ -368,6 +330,44 @@ float calculeTempsDePhase(float acceleration, float vitesse, float distance) {
 			return (-vitesse - sqrt(s)) / acceleration;
 		}
 	}
+
+}
+void test_pid_atteint_la_vitesse_demandee() {
+    EvenementEtValeur vitesseDemandee = {VITESSE_DEMANDEE, NEUTRE + 50};
+    tableauDeBord.vitesseMesuree.direction = AVANT;
+    tableauDeBord.vitesseMesuree.magnitude = 0;
+    initialisePid();
+    PUISSANCE_machine(&vitesseDemandee);
+    
+    modelePhysique(100);
+    verifieEgalite("PIDV01", tableauDeBord.vitesseMesuree.magnitude, 50 * 2);
+}
+
+void test_limite_la_tension_moyenne_maximum() {
+    int n;
+    EvenementEtValeur evenementEtValeur;
+
+    initialisePid();
+
+    // Marche avant:
+    evenementEtValeur.evenement = VITESSE_DEMANDEE;
+    evenementEtValeur.valeur = 80;
+    PUISSANCE_machine(&evenementEtValeur);    
+
+    for (n = 0; n < 1000; n++) {
+        // Avertit que l'alimentation est trop basse:
+        evenementEtValeur.valeur = LECTURE_ALIMENTATION_MIN - 1;
+        evenementEtValeur.evenement = LECTURE_ALIMENTATION;
+        PUISSANCE_machine(&evenementEtValeur);    
+
+        // Indique que la voiture est bloquée, pour que le PID accélère:
+        evenementEtValeur.evenement = VITESSE_MESUREE;
+        evenementEtValeur.valeur = 0;
+        PUISSANCE_machine(&evenementEtValeur);            
+    }
+
+    // La tension moyenne de sortie est à zéro:
+    verifieEgalite("PMAX01", tableauDeBord.tensionMoyenne.magnitude, TENSION_MOYENNE_MAX_REDUITE/64);
 }
 
 void test_pid_atteint_le_deplacement_demande() {
@@ -381,14 +381,8 @@ void test_pid_atteint_le_deplacement_demande() {
     float nt, ntt;
     float u;
 
-    reinitialisePid();
-
-    tableauDeBord.vitesseMesuree.direction = AVANT;
-    tableauDeBord.vitesseMesuree.magnitude = 0;
-    tableauDeBord.vitesseMesuree.direction = AVANT;
-    tableauDeBord.tensionMoyenne.magnitude = 0;
-    tableauDeBord.deplacementDemande.direction = AVANT;
-    tableauDeBord.deplacementDemande.magnitude = 0;
+    initialisePid();
+    initialiseTableauDeBord();
 
     PUISSANCE_machine(&deplacementDemande);
     verifieEgalite("PIDD01", tableauDeBord.deplacementDemande.magnitude, 2 * 50);
@@ -418,6 +412,7 @@ void test_pid_atteint_le_deplacement_demande() {
             if (ntt <= 0) {
                 tableauDeBord.deplacementMesure.magnitude = 0;
                 PUISSANCE_machine(&deplacementArrete);
+                verifieEgalite("PIDD01", defileMessageInterne()->evenement, MOTEUR_TENSION_MOYENNE);
                 ntt = 255.0 / 1584.1;
             }            
             if (nt > 0) {
@@ -433,9 +428,13 @@ void test_pid_atteint_le_deplacement_demande() {
         }
         tableauDeBord.tempsDeDeplacement = (unsigned char) nt;
         PUISSANCE_machine(&moteurPhase);
+        if (tableauDeBord.deplacementDemande.magnitude == 0) {
+            verifieEgalite("PIDD02", defileMessageInterne()->evenement, DEPLACEMENT_ATTEINT);
+        }
+        verifieEgalite("PIDD03", defileMessageInterne()->evenement, MOTEUR_TENSION_MOYENNE);
     }
-    verifieEgalite("PIDD02", tableauDeBord.vitesseMesuree.magnitude, 0);
-    verifieIntervale("PIDD03", tableauDeBord.deplacementDemande.magnitude, 0, 4);
+    verifieEgalite("PIDD10", tableauDeBord.vitesseMesuree.magnitude, 0);
+    verifieIntervale("PIDD11", tableauDeBord.deplacementDemande.magnitude, 0, 4);
 }
 
 void test_MOTEUR_TENSION_MOYENNE_a_chaque_VITESSE_MESUREE() {
@@ -443,7 +442,7 @@ void test_MOTEUR_TENSION_MOYENNE_a_chaque_VITESSE_MESUREE() {
     EvenementEtValeur evVitesseMesuree = {VITESSE_MESUREE, 128};
     unsigned char n;
     
-    reinitialisePid();
+    initialisePid();
     PUISSANCE_machine(&evVitesseDemandee);
     for(n = 0; n < 5; n++) {
         PUISSANCE_machine(&evVitesseMesuree);

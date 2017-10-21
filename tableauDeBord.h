@@ -56,28 +56,11 @@ TableauDeBord tableauDeBord = {
     0                        // Temps depuis le changement de phase.
 };
 
-/**
- * Ajoute un message interne dans la queue.
- * Certains messages internes se réfèrent
- * à des changements du {@link TableauDeBord}.
- * @param evenement Identifiant du message interne.
- * @param valeur Valeur associée.
- */
 void enfileMessageInterne(Evenement evenement, unsigned char valeur);
-
-/**
- * Récupère un message interne de la queue.
- * Les messages internes n'ont pas de valeur associée car ils se réfèrent
- * toujours à des changements du {@link TableauDeBord}.
- * @return L'identifiant du message interne.
- */
 EvenementEtValeur *defileMessageInterne();
-
-/**
- * Réinitialise la file des messages internes.
- * Utilisée pour les tests unitaires.
- */
 void initialiseMessagesInternes();
+void initialiseTableauDeBord();
+
 
 #ifdef TEST
 void test_tableauDeBord();
