@@ -78,16 +78,16 @@ unsigned char verifieEgalite(const char *testId, int valeurObtenue, int valeurAt
 /**
  * Vérifie si <param>value</param> se trouve entre les deux
  * limites.
- * @param value Valeur obtenue.
+ * @param valeurObtenue Valeur obtenue.
  * @param min La valeur obtenue ne doit pas être inférieure à min.
  * @param max La valeur obtenue ne doit pas être supérieure a max.
  * @param testId Identifiant du test.
  */
-unsigned char verifieIntervale(const char *testId, int value, int min, int max) {
+unsigned char verifieIntervale(const char *testId, int valeurObtenue, int min, int max) {
 
-    if ( (value < min) || (value > max) ) {
+    if ( (valeurObtenue < min) || (valeurObtenue > max) ) {
         printf("Test %s: attendu entre [%d] et [%d], mais [%d]\r\n",
-                testId, min, max, value);
+                testId, min, max, valeurObtenue);
         testsEnErreur ++;
         return 1;
     } else {

@@ -109,20 +109,10 @@ void regulateurVitesse(MagnitudeEtDirection *vitesseMesuree,
     corrigeTensionMoyenne(correction);
 }
 
-int correctionDeplacement = 0;
-
 void initialiseRegulateurDeDeplacement(unsigned char valeur) {
     MagnitudeEtDirection magnitudeEtDirection;
     convertitEnMagnitudeEtDirection(valeur, &magnitudeEtDirection);
     opereAmoinsB(&(tableauDeBord.deplacementDemande), &magnitudeEtDirection);
-    switch (tableauDeBord.deplacementDemande.direction) {
-        case ARRIERE:
-            erreurPrecedente = - tableauDeBord.deplacementDemande.magnitude;
-            break;
-        case AVANT:
-            erreurPrecedente = tableauDeBord.deplacementDemande.magnitude;
-            break;
-    }
 }
 
 /**
@@ -148,31 +138,57 @@ unsigned char regulateurDeplacement(MagnitudeEtDirection *deplacementMesure,
         14, 15, 15, 17, 18, 19, 21, 23, 25, 28, 31, 36, 42, 51, 63, 85, 127, 
         255
     };
+    int erreurP;
+    int erreurD;
     int correction;
     
-    // Calcule la correction P:
+    /** Calcule l'erreur P: */
+    switch (tableauDeBord.deplacementDemande.direction) {
+        case ARRIERE:
+            erreurP = tableauDeBord.deplacementDemande.magnitude;
+            break;
+        case AVANT:
+            erreurP = - tableauDeBord.deplacementDemande.magnitude;
+            break;
+    }
+
+    // Calcule l'erreur D:
     if (deplacementMesure->magnitude == 1) {
         switch (deplacementMesure->direction) {
             case ARRIERE:
-                erreurPrecedente--;
-                correction = -D_DEPLACEMENT * div[tempsDeDeplacement];
+                erreurP++;
+                erreurD = div[tempsDeDeplacement];
                 break;
             case AVANT:
-                erreurPrecedente++;
-                correction = +D_DEPLACEMENT * div[tempsDeDeplacement];
+                erreurP--;
+                erreurD = -div[tempsDeDeplacement];
                 break;
         }
     } else {
-        correction = 0;
+        erreurD = 0;
     }
-    correction += erreurPrecedente * P_DEPLACEMENT;
+    
+    // Calcule la correction:
+    correction = erreurP * P_DEPLACEMENT + erreurD * D_DEPLACEMENT;
 
     // Corrige la tension moyenne:
     corrigeTensionMoyenne(correction);
     
     // Met à jour le déplacement
-    return opereAplusB(&(tableauDeBord.deplacementDemande), 
-                             &(tableauDeBord.deplacementMesure));
+    if (erreurP < 0) {
+        tableauDeBord.deplacementDemande.direction = AVANT;
+        tableauDeBord.deplacementDemande.magnitude = - erreurP;
+    } else {
+        tableauDeBord.deplacementDemande.direction = ARRIERE;
+        tableauDeBord.deplacementDemande.magnitude = erreurP;        
+    }
+    
+    // Indique si le déplacement est atteint:
+    if (erreurP == 0) {
+        return TRUE;
+    } else {
+        return FALSE;
+    }
 }
 
 /**
@@ -379,12 +395,15 @@ void test_pid_atteint_le_deplacement_demande() {
 
     omega = 0;
     
-    for (n = 0; n < 100; n++) {
+    for (n = 0; n < 150; n++) {
         delta = 0;
         nt = 255;
         ntt = 255.0 / 1584.1;
         do {
             u = 7.2 * tableauDeBord.tensionMoyenne.magnitude / 255.0;
+            if (tableauDeBord.tensionMoyenne.direction == ARRIERE) {
+                u = -u;
+            }
 
             tau = 0.0613 * (u - omega / 230.4);
             alpha = tau * 10333.2;
@@ -416,7 +435,7 @@ void test_pid_atteint_le_deplacement_demande() {
         PUISSANCE_machine(&moteurPhase);
     }
     verifieEgalite("PIDD02", tableauDeBord.vitesseMesuree.magnitude, 0);
-    verifieEgalite("PIDD03", tableauDeBord.deplacementDemande.magnitude, 0);
+    verifieIntervale("PIDD03", tableauDeBord.deplacementDemande.magnitude, 0, 4);
 }
 
 void test_MOTEUR_TENSION_MOYENNE_a_chaque_VITESSE_MESUREE() {
