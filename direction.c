@@ -103,19 +103,6 @@ void initialiseDirection() {
 }
 
 /**
- * Ajoute une nouvelle manoeuvre à la file.
- * @param numeroDeManoeuvre Le numéro de manoeuvre.
- */
-void enfileManoeuvre(unsigned char numeroDeManoeuvre) {
-    if (!fileEstPleine(&fileManoeuvres)) {
-        i2cExposeValeur(LECTURE_I2C_DERNIERE_MANOEUVRE_RECUE, numeroDeManoeuvre);
-        fileEnfile(&fileManoeuvres, numeroDeManoeuvre);            
-        nombreDeManoeuvresAExecuter ++;
-        i2cExposeValeur(LECTURE_I2C_NOMBRE_DE_MANOEUVRES, nombreDeManoeuvresAExecuter);
-    }
-}
-
-/**
  * Exécute la manoeuvre indiquée en plaçant les événements nécessaires.
  * @param numeroDeManoeuvre Le numéro de manoeuvre.
  */
@@ -125,6 +112,22 @@ void executeManoeuvre(unsigned char numeroDeManoeuvre) {
     manoeuvre = &(manoeuvres[numeroDeManoeuvre]);
     enfileMessageInterne(DEPLACEMENT_DEMANDE, manoeuvre->distance);
     enfileMessageInterne(LECTURE_RC_GAUCHE_DROITE, manoeuvre->orientationRoues);
+}
+
+/**
+ * Ajoute une nouvelle manoeuvre à la file.
+ * @param numeroDeManoeuvre Le numéro de manoeuvre.
+ */
+void enfileManoeuvre(unsigned char numeroDeManoeuvre) {
+    if (!fileEstPleine(&fileManoeuvres)) {
+        i2cExposeValeur(LECTURE_I2C_DERNIERE_MANOEUVRE_RECUE, numeroDeManoeuvre);
+        i2cExposeValeur(LECTURE_I2C_NOMBRE_DE_MANOEUVRES, nombreDeManoeuvresAExecuter);
+        if (nombreDeManoeuvresAExecuter++ == 0) {
+            executeManoeuvre(numeroDeManoeuvre);
+        } else {
+            fileEnfile(&fileManoeuvres, numeroDeManoeuvre);            
+        }
+    }
 }
 
 /**
@@ -397,8 +400,6 @@ void execute_immediatement_la_premiere_manoeuvre() {
     receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
     receptionBus(ECRITURE_I2C_MANOEUVRE, 2);
     
-    DIRECTION_machine(&deplacementAtteint);
-
     evenementEtValeur = defileMessageInterne();
     verifieEgalite("DIR_MAP0", evenementEtValeur->evenement, DEPLACEMENT_DEMANDE);
     verifieEgalite("DIR_MAP1", evenementEtValeur->valeur, manoeuvres[1].distance);
@@ -420,11 +421,10 @@ void execute_la_suivante_manoeuvre_apres_avoir_complete_la_premiere() {
     receptionBus(2, 1);
     receptionBus(2, 2);
     
-    DIRECTION_machine(&deplacementAtteint);
     defileMessageInterne();
     defileMessageInterne();
     verifieEgalite("DIR_MASU00", (int) defileMessageInterne(), 0);
-    verifieEgalite("DIR_MASU01", nombreDeManoeuvresAExecuter, 1);
+    verifieEgalite("DIR_MASU01", nombreDeManoeuvresAExecuter, 2);
 
     DIRECTION_machine(&deplacementAtteint);
     evenementEtValeur = defileMessageInterne();
@@ -462,12 +462,12 @@ void execute_un_arret_apres_avoir_complete_la_derniere_manoeuvre() {
 void ignore_les_manoeuvres_si_la_file_deborde() {
     unsigned char n;
     reinitialiseManoeuvres();
-    for(n = 0; n < FILE_TAILLE; n++) {
+    for(n = 0; n < FILE_TAILLE + 1; n++) {
         receptionBus(2, 1);    
     }
-    verifieEgalite("DIR_MAD01", nombreDeManoeuvresAExecuter, FILE_TAILLE);
+    verifieEgalite("DIR_MAD01", nombreDeManoeuvresAExecuter, FILE_TAILLE + 1);
     receptionBus(2, 1);    
-    verifieEgalite("DIR_MAD02", nombreDeManoeuvresAExecuter, FILE_TAILLE);    
+    verifieEgalite("DIR_MAD02", nombreDeManoeuvresAExecuter, FILE_TAILLE + 1);    
 }
 
 void reinitialise_les_manoeuvres_si_commande_de_vitesse() {

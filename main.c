@@ -37,9 +37,9 @@
 
 #ifndef TEST
 
-#define TEMPS_BASE_DE_TEMPS 2656
-#define TEMPS_SOUS_DIVISIONS 50
-#define NOMBRE_DE_SOUS_DIVISIONS_DE_TEMPS 53
+#define VITESSE_BASE_DE_TEMPS 2656
+#define DEPLACEMENT_DUREE_SOUS_DIVISIONS 10
+#define DEPLACEMENT_NOMBRE_SOUS_DIVISIONS 255
 
 typedef enum {
     TEMPS_HAUT,
@@ -91,9 +91,10 @@ void interrupt interruptionsHautePriorite() {
 void low_priority interrupt interruptionsBassePriorite() {
     unsigned char hall;
     static unsigned char hall0 = 0;
-    static int tempsMesureVitesse = TEMPS_BASE_DE_TEMPS;
-    static unsigned char tempsSousDivisions = TEMPS_SOUS_DIVISIONS;
-    static unsigned char nombreSousDivisionsDeTemps = NOMBRE_DE_SOUS_DIVISIONS_DE_TEMPS;
+    static int tempsMesureVitesse = VITESSE_BASE_DE_TEMPS;
+    static unsigned char deplacementDureeSousDivision = DEPLACEMENT_DUREE_SOUS_DIVISIONS;
+    static unsigned char nombreSousDivisionsDeTemps = DEPLACEMENT_NOMBRE_SOUS_DIVISIONS;
+    static unsigned char tempsDeDeplacement = DEPLACEMENT_NOMBRE_SOUS_DIVISIONS;
     unsigned char mesureRc;
     static int mesureAdc = 0;
 
@@ -155,24 +156,35 @@ void low_priority interrupt interruptionsBassePriorite() {
     if (PIR1bits.TMR2IF) {
         PIR1bits.TMR2IF = 0;
 
-        if (-- tempsSousDivisions == 0) {
-            tempsSousDivisions = TEMPS_SOUS_DIVISIONS;
-            if (nombreSousDivisionsDeTemps > 0) {
-                nombreSousDivisionsDeTemps --;
-            }
-        }
-
         // Événement base de temps:
         if (-- tempsMesureVitesse == 0) {
             enfileEvenement(BASE_DE_TEMPS, 0);
-            tempsMesureVitesse = TEMPS_BASE_DE_TEMPS;
+            tempsMesureVitesse = VITESSE_BASE_DE_TEMPS;
+        }
+
+        // Mesure le temps entre deux phases:
+        if (-- deplacementDureeSousDivision == 0) {
+            deplacementDureeSousDivision = DEPLACEMENT_DUREE_SOUS_DIVISIONS;
+
+            // Mesure le temps de déplacement:
+            if (tempsDeDeplacement > 0) {
+                tempsDeDeplacement--;
+            }
+
+            // Détecte qu'il n'y a pas de déplacement:
+            nombreSousDivisionsDeTemps --;
+            if (nombreSousDivisionsDeTemps == 0) {
+                enfileEvenement(DEPLACEMENT_ARRETE, 0);
+                nombreSousDivisionsDeTemps = DEPLACEMENT_NOMBRE_SOUS_DIVISIONS;
+            }
         }
 
         // Événement PHASE:
         hall = PORTA & 7;
         if (hall != hall0) {
-            tableauDeBord.tempsDeDeplacement = nombreSousDivisionsDeTemps;
-            nombreSousDivisionsDeTemps = NOMBRE_DE_SOUS_DIVISIONS_DE_TEMPS;
+            tableauDeBord.tempsDeDeplacement = tempsDeDeplacement;
+            nombreSousDivisionsDeTemps = DEPLACEMENT_NOMBRE_SOUS_DIVISIONS;
+            tempsDeDeplacement = DEPLACEMENT_NOMBRE_SOUS_DIVISIONS;
             enfileEvenement(MOTEUR_PHASE, hall);
             hall0 = hall;
         }
@@ -356,14 +368,14 @@ void main() {
     ANSELB = 0x00;
     ANSELC = 0x00;
     
+    test_file();
     test_domaine();
     test_tableauDeBord();
     test_evenements();
-    test_puissance();
     test_moteur();
     test_direction();
     test_capture();
-    test_file();
+    test_puissance();
 
     finaliseTests();
     

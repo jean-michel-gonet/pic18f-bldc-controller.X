@@ -227,6 +227,29 @@ void test_mesureVitesseInversionMarche() {
     verifieEgalite("MOMV_20a", mesureDeVitesse.direction, ARRIERE);
     verifieEgalite("MOMV_20b", mesureDeVitesse.magnitude, 2);
 }
+void test_mesureVitesseEtDeplacement() {
+    EvenementEtValeur moteurPhase = {MOTEUR_PHASE, 0};
+
+    moteurPhase.valeur = phaseParHall[1];
+    MOTEUR_machine(&moteurPhase);
+    verifieEgalite("MOVD_01", tableauDeBord.deplacementMesure.magnitude, 0);
+
+    moteurPhase.valeur = phaseParHall[2];
+    MOTEUR_machine(&moteurPhase);
+    verifieEgalite("MOVD_01", tableauDeBord.deplacementMesure.magnitude, 1);
+    verifieEgalite("MOVD_01", tableauDeBord.deplacementMesure.direction, AVANT);
+
+    moteurPhase.valeur = phaseParHall[3];
+    MOTEUR_machine(&moteurPhase);
+    verifieEgalite("MOVD_01", tableauDeBord.deplacementMesure.magnitude, 1);
+    verifieEgalite("MOVD_01", tableauDeBord.deplacementMesure.direction, AVANT);
+
+    moteurPhase.valeur = phaseParHall[2];
+    MOTEUR_machine(&moteurPhase);
+    verifieEgalite("MOVD_01", tableauDeBord.deplacementMesure.magnitude, 1);
+    verifieEgalite("MOVD_01", tableauDeBord.deplacementMesure.direction, ARRIERE);
+}
+
 void test_calculeAmplitudesMarcheArriere() {
     MagnitudeEtDirection tensionMoyenne = {ARRIERE, P};
     
@@ -383,6 +406,7 @@ void test_moteur() {
     test_mesureVitesseMarcheAvant();
     test_mesureVitesseMarcheArriere();
     test_mesureVitesseInversionMarche();
+    test_mesureVitesseEtDeplacement();
     test_calculeAmplitudesMarcheArriere();
     test_calculeAmplitudesMarcheAvant();
     
