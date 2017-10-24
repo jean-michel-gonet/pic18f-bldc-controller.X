@@ -45,8 +45,8 @@ static MagnitudeEtDirection deplacementZero = {AVANT, 0};
 #define P_VITESSE 24
 #define D_VITESSE 9
 
-#define P_DEPLACEMENT 1
-#define D_DEPLACEMENT 10
+#define P_DEPLACEMENT 2
+#define D_DEPLACEMENT 1
 
 static int tensionMoyenne = 0;   // Tension moyenne, multipliée par 32
 static int erreurPrecedente = 0; // Erreur précédente, pour calculer D.
@@ -59,7 +59,7 @@ void initialisePid() {
     erreurPrecedente = 0;
 }
 
-void corrigeTensionMoyenne(int correction) {
+void corrigeTensionMoyenne(int correction, unsigned char diviseur) {
     int magnitude;
 
     // Corrige la tension moyenne:
@@ -81,7 +81,7 @@ void corrigeTensionMoyenne(int correction) {
         tableauDeBord.tensionMoyenne.direction = AVANT;
         magnitude = tensionMoyenne;
     }
-    magnitude >>= 6;
+    magnitude >>= diviseur;
     tableauDeBord.tensionMoyenne.magnitude = (unsigned char) magnitude;
 }
 
@@ -106,7 +106,7 @@ void regulateurVitesse(MagnitudeEtDirection *vitesseMesuree,
     erreurPrecedente = erreurP;
     correction += erreurD * D_VITESSE;
 
-    corrigeTensionMoyenne(correction);
+    corrigeTensionMoyenne(correction, 6);
 }
 
 void initialiseRegulateurDeDeplacement(unsigned char valeur) {
@@ -124,20 +124,24 @@ void initialiseRegulateurDeDeplacement(unsigned char valeur) {
  */
 unsigned char regulateurDeplacement(MagnitudeEtDirection *deplacementMesure, 
                            unsigned char tempsDeDeplacement) {
+ 
     static const unsigned char const div[255] = {
-        0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-        1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 
-        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 
-        2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 
-        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 
-        6, 6, 6, 7, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 11, 11, 12, 12, 13, 
-        14, 15, 15, 17, 18, 19, 21, 23, 25, 28, 31, 36, 42, 51, 63, 85, 127, 
-        255
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 
+        8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 
+        9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 
+        10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 
+        11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13, 
+        13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 14, 14, 14, 
+        14, 15, 15, 15, 15, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 17, 
+        17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 19, 19, 19, 19, 19, 20, 
+        20, 20, 20, 20, 21, 21, 21, 21, 21, 22, 22, 22, 22, 23, 23, 23, 24, 24, 
+        24, 24, 25, 25, 25, 26, 26, 26, 27, 27, 27, 28, 28, 29, 29, 30, 30, 30, 
+        31, 31, 32, 32, 33, 34, 34, 35, 35, 36, 37, 37, 38, 39, 40, 40, 41, 42, 
+        43, 44, 45, 46, 47, 48, 49, 51, 52, 53, 55, 56, 58, 60, 61, 63, 65, 68, 
+        70, 72, 75, 78, 81, 85, 88, 92, 97, 102, 107, 113, 120, 127, 136, 145, 
+        156, 170, 185, 204, 226, 255, 255, 255, 255, 255, 255, 255, 255     
     };
+ 
     int erreurP;
     int erreurD;
     int correction;
@@ -172,23 +176,28 @@ unsigned char regulateurDeplacement(MagnitudeEtDirection *deplacementMesure,
     correction = erreurP * P_DEPLACEMENT + erreurD * D_DEPLACEMENT;
 
     // Corrige la tension moyenne:
-    corrigeTensionMoyenne(correction);
+    corrigeTensionMoyenne(correction, 7);
     
     // Met à jour le déplacement
     if (erreurP < 0) {
         tableauDeBord.deplacementDemande.direction = AVANT;
         tableauDeBord.deplacementDemande.magnitude = - erreurP;
+        if (erreurP > -5) {
+            return TRUE;
+        }
     } else {
         tableauDeBord.deplacementDemande.direction = ARRIERE;
         tableauDeBord.deplacementDemande.magnitude = erreurP;        
+        if (erreurP < 5) {
+            return TRUE;
+        }
     }
-    
-    // Indique si le déplacement est atteint:
-    if (erreurP == 0) {
-        return TRUE;
-    } else {
-        return FALSE;
-    }
+    return FALSE;
+}
+
+unsigned char regulateurDeplacementArrete() {
+    static MagnitudeEtDirection deplacementZero = {AVANT, 0};
+    return regulateurDeplacement(&deplacementZero, 0);
 }
 
 /**
@@ -221,7 +230,7 @@ void PUISSANCE_machine(EvenementEtValeur *ev) {
             
         case DEPLACEMENT_ARRETE:
             if (modePid == MODE_PID_DEPLACEMENT) {
-                regulateurDeplacement(&(tableauDeBord.deplacementMesure), 0);
+                regulateurDeplacementArrete();
                 enfileMessageInterne(MOTEUR_TENSION_MOYENNE, 0);
             }
             break;

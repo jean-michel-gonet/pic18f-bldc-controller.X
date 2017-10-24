@@ -393,7 +393,6 @@ void passe_en_mode_bus_si_la_telecommande_est_longtemps_neutre() {
 void execute_immediatement_la_premiere_manoeuvre() {
     initialiseMessagesInternes();
     initialiseDirection();
-    EvenementEtValeur deplacementAtteint = {DEPLACEMENT_ATTEINT, 0};
     busOuTelecommande = MODE_BUS_DE_COMMANDES;
     EvenementEtValeur *evenementEtValeur;
     
@@ -418,8 +417,8 @@ void execute_la_suivante_manoeuvre_apres_avoir_complete_la_premiere() {
     busOuTelecommande = MODE_BUS_DE_COMMANDES;
     EvenementEtValeur *evenementEtValeur;
     
-    receptionBus(2, 1);
-    receptionBus(2, 2);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 2);
     
     defileMessageInterne();
     defileMessageInterne();
@@ -444,8 +443,8 @@ void execute_un_arret_apres_avoir_complete_la_derniere_manoeuvre() {
     EvenementEtValeur deplacementAtteint = {DEPLACEMENT_ATTEINT, 0};
     busOuTelecommande = MODE_BUS_DE_COMMANDES;
     
-    receptionBus(2, 1);
-    receptionBus(2, 2);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 2);
 
     DIRECTION_machine(&deplacementAtteint);
     defileMessageInterne();
@@ -463,10 +462,10 @@ void ignore_les_manoeuvres_si_la_file_deborde() {
     unsigned char n;
     reinitialiseManoeuvres();
     for(n = 0; n < FILE_TAILLE + 1; n++) {
-        receptionBus(2, 1);    
+        receptionBus(ECRITURE_I2C_MANOEUVRE, 1);    
     }
     verifieEgalite("DIR_MAD01", nombreDeManoeuvresAExecuter, FILE_TAILLE + 1);
-    receptionBus(2, 1);    
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);    
     verifieEgalite("DIR_MAD02", nombreDeManoeuvresAExecuter, FILE_TAILLE + 1);    
 }
 
@@ -476,15 +475,15 @@ void reinitialise_les_manoeuvres_si_commande_de_vitesse() {
     busOuTelecommande = MODE_BUS_DE_COMMANDES;
     EvenementEtValeur *evenementEtValeur;
 
-    receptionBus(2, 1);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
     evenementEtValeur = defileEvenement();
     evenementEtValeur = defileEvenement();
 
-    receptionBus(2, 1);
-    receptionBus(2, 1);
-    receptionBus(2, 1);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
     
-    receptionBus(0, 12);
+    receptionBus(ECRITURE_I2C_VITESSE, 12);
     evenementEtValeur = defileEvenement();
     verifieEgalite("DIR_MARVD0", evenementEtValeur->evenement, VITESSE_DEMANDEE);
     verifieEgalite("DIR_MARVD1", evenementEtValeur->valeur, 12);
@@ -497,15 +496,15 @@ void reinitialise_les_manoeuvres_si_commande_de_orientation_des_roues() {
     busOuTelecommande = MODE_BUS_DE_COMMANDES;
     EvenementEtValeur *evenementEtValeur;
 
-    receptionBus(2, 1);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
     evenementEtValeur = defileEvenement();
     evenementEtValeur = defileEvenement();
 
-    receptionBus(2, 1);
-    receptionBus(2, 1);
-    receptionBus(2, 1);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
     
-    receptionBus(1, 12);
+    receptionBus(ECRITURE_I2C_DIRECTION, 12);
     evenementEtValeur = defileEvenement();
     verifieEgalite("DIR_MARDD0", evenementEtValeur->evenement, LECTURE_RC_GAUCHE_DROITE);
     verifieEgalite("DIR_MARDD1", evenementEtValeur->valeur, 12);
@@ -519,13 +518,13 @@ void reinitialise_les_manoeuvres_si_telecommande() {
     busOuTelecommande = MODE_BUS_DE_COMMANDES;
     EvenementEtValeur *evenementEtValeur;
 
-    receptionBus(2, 1);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
     evenementEtValeur = defileEvenement();
     evenementEtValeur = defileEvenement();
 
-    receptionBus(2, 1);
-    receptionBus(2, 1);
-    receptionBus(2, 1);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
+    receptionBus(ECRITURE_I2C_MANOEUVRE, 1);
     
     receptionTelecommandeAvantArriere(10);
     evenementEtValeur = defileEvenement();

@@ -96,7 +96,6 @@ void low_priority interrupt interruptionsBassePriorite() {
     static unsigned char nombreSousDivisionsDeTemps = DEPLACEMENT_NOMBRE_SOUS_DIVISIONS;
     static unsigned char tempsDeDeplacement = DEPLACEMENT_NOMBRE_SOUS_DIVISIONS;
     unsigned char mesureRc;
-    static int mesureAdc = 0;
 
     // Traitement des conversions AD:
     if (PIR5bits.TMR4IF) {
