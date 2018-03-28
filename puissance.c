@@ -182,15 +182,12 @@ unsigned char regulateurDeplacement(MagnitudeEtDirection *deplacementMesure,
     if (erreurP < 0) {
         tableauDeBord.deplacementDemande.direction = AVANT;
         tableauDeBord.deplacementDemande.magnitude = - erreurP;
-        if (erreurP > -5) {
-            return TRUE;
-        }
     } else {
         tableauDeBord.deplacementDemande.direction = ARRIERE;
         tableauDeBord.deplacementDemande.magnitude = erreurP;        
-        if (erreurP < 5) {
-            return TRUE;
-        }
+    }
+    if (erreurP == 0) {
+        return TRUE;
     }
     return FALSE;
 }
@@ -443,7 +440,7 @@ void test_pid_atteint_le_deplacement_demande() {
         verifieEgalite("PIDD03", defileMessageInterne()->evenement, MOTEUR_TENSION_MOYENNE);
     }
     verifieEgalite("PIDD10", tableauDeBord.vitesseMesuree.magnitude, 0);
-    verifieIntervale("PIDD11", tableauDeBord.deplacementDemande.magnitude, 0, 4);
+    verifieIntervale("PIDD11", tableauDeBord.deplacementDemande.magnitude, 0, 10);
 }
 
 void test_MOTEUR_TENSION_MOYENNE_a_chaque_VITESSE_MESUREE() {
