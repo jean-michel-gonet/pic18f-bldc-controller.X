@@ -83,6 +83,7 @@ void corrigeTensionMoyenne(int correction, unsigned char diviseur) {
     }
     magnitude >>= diviseur;
     tableauDeBord.tensionMoyenne.magnitude = (unsigned char) magnitude;
+    i2cExposeValeur(LECTURE_I2C_TENSION_MOYENNE, tableauDeBord.tensionMoyenne.magnitude);
 }
 
 /**

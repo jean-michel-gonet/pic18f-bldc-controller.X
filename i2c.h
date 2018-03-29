@@ -10,13 +10,13 @@ typedef enum {
     ECRITURE_I2C_DIRECTION                = 1,
     ECRITURE_I2C_MANOEUVRE                = 2,
 
-    LECTURE_I2C_VITESSE_RC                = 0, // 0x10
-    LECTURE_I2C_RC_GAUCHE_DROITE          = 1, // 0x11
-    LECTURE_I2C_INACTIVITE_TELECOMMANDE   = 2, // 0x12
-    LECTURE_I2C_LECTURE_ERREUR_I          = 3, // 0x13
-    LECTURE_I2C_DERNIERE_MANOEUVRE_RECUE  = 4, // 0x14
-    LECTURE_I2C_NOMBRE_DE_MANOEUVRES      = 5, // 0x15
-    LECTURE_I2C_N                         = 6  // 0x16
+    LECTURE_I2C_VITESSE_RC                = 0, // 0x10 = 16
+    LECTURE_I2C_RC_GAUCHE_DROITE          = 1, // 0x11 = 17
+    LECTURE_I2C_INACTIVITE_TELECOMMANDE   = 2, // 0x12 = 18
+    LECTURE_I2C_VITESSE_MESUREE           = 3, // 0x13 = 19
+    LECTURE_I2C_DERNIERE_MANOEUVRE_RECUE  = 4, // 0x14 = 20
+    LECTURE_I2C_NOMBRE_DE_MANOEUVRES      = 5, // 0x15 = 21
+    LECTURE_I2C_TENSION_MOYENNE           = 6  // 0x16 = 22
             
 } I2cAdresse;
 

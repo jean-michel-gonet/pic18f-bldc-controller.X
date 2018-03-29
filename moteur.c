@@ -5,6 +5,7 @@
 #include "test.h"
 #include "evenements.h"
 #include "moteur.h"
+#include "i2c.h"
 
 typedef struct {
     unsigned char H;
@@ -170,6 +171,7 @@ void MOTEUR_machine(EvenementEtValeur *ev) {
             tableauDeBord.vitesseMesuree.magnitude = mesureDeVitesse.magnitude;
             tableauDeBord.vitesseMesuree.direction = mesureDeVitesse.direction;
             mesureDeVitesse.magnitude = 0;
+            i2cExposeValeur(LECTURE_I2C_VITESSE_MESUREE, tableauDeBord.vitesseMesuree.magnitude);
             enfileMessageInterne(VITESSE_MESUREE, 0);
             break;
     }
