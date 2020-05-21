@@ -139,12 +139,12 @@ $Q_{boot} = Q_g + t_{hon} \cdot I_{qbs}$
 When replacing actual values, we see again that none of that counts but
 the transistor's gate charge:
 
-$Q_{boot} = 75nC + 7.8µs \cdot 100µA = 75nC$
+$Q_{boot} = 75nC + 7.8 \micro s \cdot 100 \micro A = 75nC$
 
 Because of the ``Qboot`` charge lost during the high on time, by the
 end of the high on period, the voltage in _Cboot_ will be:
 
-$V_{cboot}(t_hon) = V_{cboot}(t_0) - \frac{Q_{boot}}{C_{boot}}$
+$V_{cboot}(t_{hon}) = V_{cboot}(t_0) - \frac{Q_{boot}}{C_{boot}}$
 
 And this has to be enough to keep the high side transistor on:
 
