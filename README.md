@@ -139,7 +139,7 @@ say:
 When replacing actual values, we see again that none of that counts but
 the transistor's gate charge:
 
-<img src="/tex/babe0a914da201a2ca93ffe71621db0e.svg?invert_in_darkmode&sanitize=true" align=middle width=257.4959442pt height=22.465723500000017pt/>
+<img src="/tex/1d9e2cfb6fc5e546a1ffbbf6f3e7ecd5.svg?invert_in_darkmode&sanitize=true" align=middle width=172.6612305pt height=118.35616649999997pt/>
 
 Because of the ``Qboot`` charge lost during the high on time, by the
 end of the high on period, the voltage in _Cboot_ will be:
