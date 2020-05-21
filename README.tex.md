@@ -107,7 +107,7 @@ This condition has to hold as long as the high side is on. At a frequency of
 128kHz, considering an unrealistic duty cycle of 100%, the maximum time the
 high side needs to keep conducting is:
 
-$t_{hon} < \frac{1}{125 \cdot 10^3} = 7.8 \micro s$
+$t_{hon} < \frac{1}{125 \cdot 10^3} = 7.8 \mu s$
 
 During this period, the only source of power is the charge stored in _Cboot_, and
 it has to provide for:
@@ -160,7 +160,7 @@ $C > \frac{Q_g}{V_{cc} - V_{FDboot} - V_{gsmin}}$
 
 And thus:
 
-$C > 39nF$
+$C > \frac{75nC}{7.2V - 0.25V - 5V} = 39nF$
 
 Taking in count the tolerance of 10%, plus some margin, we can safely use
 0.1µF capacitors for the bootstrap circuit.
