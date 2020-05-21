@@ -139,12 +139,12 @@ say:
 When replacing actual values, we see again that none of that counts but
 the transistor's gate charge:
 
-<img src="/tex/da5349c2db2e45ccd40284b340cf86b2.svg?invert_in_darkmode&sanitize=true" align=middle width=257.4959442pt height=22.465723500000017pt/>
+<img src="/tex/babe0a914da201a2ca93ffe71621db0e.svg?invert_in_darkmode&sanitize=true" align=middle width=257.4959442pt height=22.465723500000017pt/>
 
 Because of the ``Qboot`` charge lost during the high on time, by the
 end of the high on period, the voltage in _Cboot_ will be:
 
-<img src="/tex/ed4593466556dbe916288f29b14d682a.svg?invert_in_darkmode&sanitize=true" align=middle width=227.73590069999995pt height=30.392597399999985pt/>
+<img src="/tex/89114e2052e6a2db2ea4c7f831e56423.svg?invert_in_darkmode&sanitize=true" align=middle width=224.51557259999998pt height=30.392597399999985pt/>
 
 And this has to be enough to keep the high side transistor on:
 
