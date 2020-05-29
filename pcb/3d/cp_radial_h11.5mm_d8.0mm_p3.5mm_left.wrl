@@ -1,0 +1,188 @@
+#VRML V2.0 utf8
+#
+# Pin 1:
+Shape {
+  appearance Appearance {
+    material Material {
+      diffuseColor 0.5 0.5 0.5
+    }
+  }
+  geometry Extrusion {
+    beginCap TRUE
+    endCap TRUE
+    ccw TRUE
+    convex TRUE
+    creaseAngle 0
+    crossSection [
+       0.00	 0.30,
+       0.26	 0.15,
+       0.26	-0.15,
+       0.00	-0.30,
+      -0.26	-0.15,
+      -0.26	 0.15,
+       0.00	 0.30
+    ]
+    solid TRUE
+    spine [
+         0  1.75  0,
+        -1  1.75  0,
+        -1  1.75 -4
+    ]
+  }
+}
+# Pin 2
+Shape {
+  appearance Appearance {
+    material Material {
+      diffuseColor 0.5 0.5 0.5
+    }
+  }
+  geometry Extrusion {
+    beginCap TRUE
+    endCap TRUE
+    ccw TRUE
+    convex TRUE
+    creaseAngle 0
+    crossSection [
+       0.00	 0.30,
+       0.26	 0.15,
+       0.26	-0.15,
+       0.00	-0.30,
+      -0.26	-0.15,
+      -0.26	 0.15,
+       0.00	 0.30
+    ]
+    solid TRUE
+    spine [
+         0  -1.75 0,
+        -1  -1.75 0,
+        -1  -1.75 -4
+    ]
+  }
+}
+# Capacitor side:
+Shape {
+  appearance Appearance {
+    material Material {
+      diffuseColor 0.8 0.8 0.8
+    }
+    textureTransform TextureTransform {
+      scale 1 1
+      rotation 0
+      center 0 0
+      translation 0 0
+    }
+    texture PixelTexture {
+      image
+        10 10 1
+
+        255 255 255 040 040 040 255 255 255 255
+        255 255 255 040 255 040 255 255 255 255
+        255 255 255 040 255 040 255 255 255 255
+        255 255 255 040 255 040 255 255 255 255
+        255 255 255 040 255 040 255 255 255 255
+        255 255 255 040 255 040 255 255 255 255
+        255 255 255 040 255 040 255 255 255 255
+        255 255 255 040 255 040 255 255 255 255
+        255 255 255 040 255 040 255 255 255 255
+        255 255 255 040 040 040 255 255 255 255
+
+        repeatS TRUE
+        repeatT TRUE
+    }
+  }
+  geometry Extrusion {
+    beginCap TRUE
+    endCap TRUE
+    ccw TRUE
+    convex TRUE
+    creaseAngle 0
+    crossSection [
+      -3.24	-2.35,
+      -3.80	-1.24,
+      -4.00	 0.00,
+      -3.80	 1.24,
+    ]
+    solid TRUE
+    spine [
+      0.0  0 0,
+      1.1  0 0,
+      1.4  0 0,
+      1.6  0 0,
+      2.0  0 0,
+      4.0  0 0,
+      6.0  0 0,
+      8.0  0 0,
+     10.0  0 0,
+     11.5  0 0
+    ]
+    scale [
+      1 1,
+      1 1,
+      0.9 0.9,
+      0.9 0.9,
+      1 1,
+      1 1,
+      1 1,
+      1 1,
+      1 1,
+      1 1
+    ]
+
+  }
+}
+# Capacitor Can:
+Shape {
+  appearance Appearance {
+    material Material {
+      diffuseColor 0.2 0.2 0.2
+    }
+  }
+  geometry Extrusion {
+    beginCap TRUE
+    endCap TRUE
+    ccw TRUE
+    convex TRUE
+    creaseAngle 0
+    crossSection [
+       0.00	 4.00,
+       1.24	 3.80,
+       2.35	 3.24,
+       3.24	 2.35,
+       3.80	 1.24,
+       4.00	 0.00,
+       3.80	-1.24,
+       3.24	-2.35,
+       2.35	-3.24,
+       1.24	-3.80,
+       0.00	-4.00,
+      -1.24	-3.80,
+      -2.35	-3.24,
+      -3.24	-2.35,
+      -3.80	 1.24,
+      -3.24	 2.35,
+      -2.35	 3.24,
+      -1.24	 3.80,
+       0.00	 4.00
+    ]
+    solid TRUE
+    spine [
+       0.0  0 0,
+       1.1  0 0,
+       1.4  0 0,
+       1.6  0 0,
+       2.0  0 0,
+       4.0  0 0,
+      11.5  0 0
+    ]
+    scale [
+      1 1,
+      1 1,
+      0.9 0.9,
+      0.9 0.9,
+      1 1,
+      1 1,
+      1 1
+    ]
+  }
+}
