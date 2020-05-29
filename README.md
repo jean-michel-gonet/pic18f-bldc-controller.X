@@ -10,15 +10,32 @@
 
 RC Car races are regulated by the ROARR, which states that electric RC cars
 should use 2S only. Therefore 4S is already out of norm, which means that
-most model car engines don't hold that voltage already.
+most model car engines wont't hold more than 4S.
 
 ## Why 100A?
-Because it is the golden dream of any RC car owner. Anyway - I don't really
+Because it is the golden dream of any RC car owner. To be honest, don't really
 believe that this small circuit will hold that amount of current. Something
-is going to break or melt before.
+is going to break or melt before. But still, let it be a idealistic objective.
 
 ## Why 128kHz?
+According to [AN885], page 8, _«As a rule of thumb, the PWM frequency should be
+at least 10 times that of the maximum frequency of the motor»_.
 
+A very high KV constant for standard ROAR-compliant Brushless RC car motor is
+around 6100KV for 2S, which means:
+* 6100 rpm
+* per volt
+* 7.4 volts nominal.
+* 6 windings.
+
+A brushless motor
+
+<img src="/tex/f813fd7e9af66ca108933fcd06c88ac9.svg?invert_in_darkmode&sanitize=true" align=middle width=189.94583684999998pt height=27.77565449999998pt/>
+
+Just to be on the safe side, let's multiply it by two: 90 kHz. To reach this
+frequency, the PIC18 has to be clocked at 64MHZ, so the highest reasonable
+PWM frequency it can generate is 128kHZ, which keeps a very safe margin with
+the value calculated above.
 
 # Selection of components
 
@@ -74,6 +91,33 @@ expensive, available as DIP and SMD and, most importantly, it supports small
 
 # Circuit design
 
+I've detailed here some of the calculation I did to estimate the values of certain
+components.
+
+## Breakpoint protection
+
+The module is aimed at being something open to tinkering. This means that it
+will often run in debug mode. In this mode, the micro-controller can be stopped
+at any point by a breakpoint, freezing the PWM signal in high status. When
+this happen, the current through the motor will raise exponentially until
+something burns or the battery explodes.
+
+To prevent this, a high pass filter guards the high side input of the driver:
+
+If the PWM is frozen high, the capacitor will charge, the current in the resistor
+will drop to zero, and so the ``HIN`` entry.
+
+Let's size the RC circuit so its time constant is 5 times the period of the
+PWM signal:
+
+<img src="/tex/c00aec8d20e1afd3d7bf779a0177852b.svg?invert_in_darkmode&sanitize=true" align=middle width=206.80342319999997pt height=27.77565449999998pt/>
+
+Let's chose arbitrarily a capacitor of 10nF. The frequency of the PWM signal
+is 128kHz.
+
+<img src="/tex/b778b3fa6abc4e9e19d552bdac1aaa62.svg?invert_in_darkmode&sanitize=true" align=middle width=279.6253531499999pt height=27.77565449999998pt/>
+
+To be
 ## Bootstrap capacitor
 
 To calculate the value of the bootstrap capacitor, one must understand how the
@@ -164,3 +208,34 @@ And thus:
 
 Taking in count the tolerance of 10%, plus some margin, we can safely use
 0.1µF capacitors for the bootstrap circuit.
+
+# Bibliography
+
+## References
+* [AN885] - _Brushless DC (BLDC) Motor Fundamentals_
+  * Describes how a brushless motor works.
+  * Microchip, 2003.
+  * http://ww1.microchip.com/downloads/en/AppNotes/00885a.pdf
+
+
+## Additional bibliography
+Bibliography I consulted to design the circuit.
+
+* **Brushless Motor Kv Constant Explained**
+  * A great document about what is KV constant, and plenty of other related
+    concepts that you need to know.
+  * http://learningrc.com/motor-kv/
+* **SMT / SMD Components & packages, sizes, dimensions, details**
+  * A great list of package sizes. Package sizes are critical when you're
+    soldering SMD by hand, because some of them are so small you can
+    barely see them, let alone soldering them.
+  * https://www.electronics-notes.com/articles/electronic_components/surface-mount-technology-smd-smt/packages.php
+* **Using Monolithic High Voltage Gate Drivers**
+  * Application note from Internation Rectifier about high side drivers.
+    Although it is mainly directed at IGBT, most calculations translate
+    directly to MOSFET.
+  * https://www.infineon.com/dgdl/Infineon-Using_Monolithic_Voltage_Gate_Drivers-AN-v01_00-EN.pdf?fileId=5546d462584d1d4a01585242c11947b1
+* **XERUN 3652/3660 G2, HOBBYWING User Manual**
+  * The user manual of the G2 series by Hobbywing shows some common characteristics
+    of the brushless motors this module is aiming at.
+  * https://cdn.shopify.com/s/files/1/0109/9702/files/XeRun36523660SDG2.pdf?13512914181997608195
